@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>RESULT</title>
+</head>
+
+<body>
+    
+    <div>
+        <!-- <div class="inputoutput">
+            <img id="imageSrc" alt="No Image" / >
+            <div class="caption">imageSrc
+                <input type="file" id="fileInput" name="file" />
+            </div>
+        </div> -->
+        <div class="inputoutput">
+        BASE64:<input type="file" onchange="encodeImageFileAsURL(this)">
+            <!-- <canvas id="canvasOutput"></canvas>
+            <canvas id="canvasSobelOutput"></canvas>
+            <div class="caption">canvasOutput</div> -->
+        </div>
+        <div id="cannyTest"></div>
+    </div>
+
+</body>
+<script src="quagga.js"></script>
+<script>
+function encodeImageFileAsURL(element) {
+  var file = element.files[0];
+  var reader = new FileReader();
+  reader.onloadend = function() {
+    console.log('RESULT', reader.result);
+    Quagga.decodeSingle({
+	    decoder: {
+	        readers: ["code_128_reader"] // List of active readers
+	    },
+	    // numOfWorkers: 0,
+	    locate: true, // try to locate the barcode in the image
+	    src: reader.result, // or 'data:image/jpg;base64,' + data
+	}, function(result){
+	    if(result.codeResult) {
+	        console.log("result: ", result.codeResult.code);
+	        var barcodeW = Math.sqrt( Math.pow(result.line[1].x - result.line[0].x, 2) + Math.pow(result.line[1].y - result.line[0].x, 2))
+	        // alert('Ширина баркода: ', barcodeW);
+	        var barcodeValue = parseInt(result.codeResult.code);
+	        // alert('Значение баркода: ', barcodeValue);
+	        // alert('В одном сантиметре ', barcodeW / barcodeValue, ' пикселей')
+
+	        var txtBase = document.getElementById('cannyTest');
+			txtBase.innerHTML = 'Ширина баркода: ' + barcodeW + '<br>' + 'Значение баркода: ' + barcodeValue + '<br>' + 'В одном сантиметре '+ barcodeW / barcodeValue + ' пикселей';
+	    } else {
+	        console.log("not detected", result);
+	    }
+	});
+
+  }
+  reader.readAsDataURL(file);
+}
+</script>
+</html>
