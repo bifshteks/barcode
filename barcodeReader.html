@@ -42,7 +42,7 @@ function encodeImageFileAsURL(element) {
 	}, function(result){
 	    if(result.codeResult) {
 	        console.log("result: ", result.codeResult.code);
-	        var barcodeW = Math.sqrt( Math.pow(result.line[1].x - result.line[0].x, 2) + Math.pow(result.line[1].y - result.line[0].x, 2))
+	        var barcodeW = Math.sqrt( Math.pow(result.line[1].x - result.line[0].x, 2) + Math.pow(result.line[1].y - result.line[0].y, 2))
 	        // alert('Ширина баркода: ', barcodeW);
 	        var barcodeValue = parseInt(result.codeResult.code);
 	        // alert('Значение баркода: ', barcodeValue);
