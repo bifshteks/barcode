@@ -22,6 +22,7 @@
             <div class="caption">canvasOutput</div> -->
         </div>
         <div id="cannyTest"></div>
+        <canvas id="canvasCroped"></canvas>
     </div>
 
 </body>
@@ -41,15 +42,140 @@ function encodeImageFileAsURL(element) {
 	    src: reader.result, // or 'data:image/jpg;base64,' + data
 	}, function(result){
 	    if(result.codeResult) {
-	        console.log("result: ", result.codeResult.code);
-	        var barcodeW = Math.sqrt( Math.pow(result.line[1].x - result.line[0].x, 2) + Math.pow(result.line[1].y - result.line[0].y, 2))
-	        // alert('Ширина баркода: ', barcodeW);
-	        var barcodeValue = parseInt(result.codeResult.code);
-	        // alert('Значение баркода: ', barcodeValue);
-	        // alert('В одном сантиметре ', barcodeW / barcodeValue, ' пикселей')
+	        // console.log("result: ", result.codeResult.code);
+         //  console.log('x0 ', result.line[0].x);
+         //  console.log('x1 ', result.line[1].x)
+         //  console.log('y0 ', result.line[0].y)
+         //  console.log('y1 ', result.line[1].y)
 
-	        var txtBase = document.getElementById('cannyTest');
-			txtBase.innerHTML = 'Ширина баркода: ' + barcodeW + '<br>' + 'Значение баркода: ' + barcodeValue + '<br>' + 'В одном сантиметре '+ barcodeW / barcodeValue + ' пикселей';
+        var barcodeW = Math.sqrt( Math.pow(result.line[1].x - result.line[0].x, 2) + Math.pow(result.line[1].y - result.line[0].y, 2))
+        // alert('Ширина баркода: ', barcodeW);
+        var barcodeValue = parseInt(result.codeResult.code);
+        // alert('Значение баркода: ', barcodeValue);
+        // alert('В одном сантиметре ', barcodeW / barcodeValue, ' пикселей')
+
+        var txtBase = document.getElementById('cannyTest');
+  			txtBase.innerHTML =   'Ширина баркода: ' + barcodeW + '<br>' + 'Значение баркода: ' + barcodeValue + '<br>' + 'В одном сантиметре '+ barcodeW / barcodeValue + ' пикселей';//'BASE64: ' + reader.result +
+
+
+        // IT WORKS/////////////
+        console.log('BOXES: ', result.boxes);
+
+        var testFDW = result.boxes[0][0];
+        var testSDW = result.boxes[0][2];
+        var testFDH = result.boxes[0][0];
+        var testSDH = result.boxes[0][1];
+        var testW = Math.sqrt( Math.pow(testSDW[0] - testFDW[0], 2) + Math.pow(testSDW[1] - testFDW[1], 2) )
+        var testH = Math.sqrt( Math.pow(testSDH[1] - testFDH[1], 2) +  Math.pow(testSDH[0] - testFDH[0], 2))
+        console.log('TEST width: ', testW)
+
+        console.log('ANGLE: ', result.angle)
+        ////////////////////////////
+
+        var canvas = document.getElementById('canvasCroped');
+        var context = canvas.getContext('2d');
+        var img = new Image();  // Create new img element
+        img.src = reader.result;
+        imgW = img.width;
+        imgH = img.height;
+        // canvas.width = imgW;
+        // canvas.height = imgH;
+        start();
+
+        var croppedBarcodeData = canvas.toDataURL();
+        console.log('CROPPEDbarcodeDATA: ', croppedBarcodeData);
+
+        Quagga.decodeSingle({
+          decoder: {
+            readers: ["code_128_reader"] // List of active readers
+          },
+          locate: true, // try to locate the barcode in the image
+          src: croppedBarcodeData // or 'data:image/jpg;base64,' + data
+        }, function(result){
+          if(result.codeResult) {
+            console.log("result", result.codeResult.code);
+          } else {
+            console.log("not detected");
+            var resImg = document.createElement('img')
+            resImg.src = croppedBarcodeData;
+            var divv = document.getElementById('cannyTest');
+            divv.appendChild(resImg)
+          }
+        });
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+        // context.drawImage(img, 0, 0, imgW, imgH);
+        function start(){
+
+            // create 2 temporary canvases
+
+          var canvas1=document.createElement("canvas");
+          var ctx1=canvas1.getContext("2d");
+          var canvas2=document.createElement("canvas");
+          var ctx2=canvas2.getContext("2d");
+
+          // get the boundingbox of the rotated blue box
+
+          var rectBB=getRotatedRectBB(result.boxes[0][1][0], result.boxes[0][1][1], testW, testH, result.angle);
+
+          // clip the boundingbox of the rotated blue rect
+          // to a temporary canvas
+
+          canvas1.width=canvas2.width=rectBB.width;
+          canvas1.height=canvas2.height=rectBB.height;
+
+          ctx1.drawImage(img,
+              rectBB.cx-rectBB.width/2,
+              rectBB.cy-rectBB.height/2,
+              rectBB.width,
+              rectBB.height,
+              0,0,rectBB.width,rectBB.height
+          );
+
+          // unrotate the blue rect on the temporary canvas
+
+          ctx2.translate(canvas1.width/2,canvas1.height/2);
+          ctx2.rotate(-result.angle);
+          ctx2.drawImage(canvas1,-canvas1.width/2,-canvas1.height/2);
+
+          // draw the blue rect to the display canvas
+
+          var offX=rectBB.width/2-testW/2;
+          var offY=rectBB.height/2-testH/2;
+
+          canvas.width=testW;
+          canvas.height=testH;
+          console.log('TESTw TESTh: ', testW, testH)
+          context.drawImage(canvas2,-offX,-offY);
+
+        }  // end start
+
+
+
+    // Utility: get bounding box of rotated rectangle
+
+    function getRotatedRectBB(x,y,width,height,rAngle){
+        var absCos=Math.abs(Math.cos(rAngle));
+        var absSin=Math.abs(Math.sin(rAngle));
+        var cx=x+width/2*Math.cos(rAngle)-height/2*Math.sin(rAngle);
+        var cy=y+width/2*Math.sin(rAngle)+height/2*Math.cos(rAngle); 
+        var w=width*absCos+height*absSin;
+        var h=width*absSin+height*absCos;
+        return({cx:cx,cy:cy,width:w,height:h});
+    }
+
 	    } else {
 	        console.log("not detected", result);
 	    }
