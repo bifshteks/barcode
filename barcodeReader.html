@@ -2,365 +2,371 @@
 <html>
 
 <head>
-	<meta charset="utf-8">
-	<title>RESULT</title>
+    <meta charset="utf-8">
+    <title>RESULT</title>
 </head>
 
 <body>
-	<div>
-		<!-- <div class="inputoutput">
-			<img id="imageSrc" alt="No Image" / >
-			<div class="caption">imageSrc
-				<input type="file" id="fileInput" name="file" />
-			</div>
-		</div> -->
-    <p style="display: none;">
-    Min value of detected pixel of start\end of barcode: <input  id="valPix" type="range" min="0" max="255"> <span id="i1"></span> <br>
-    <br>
-    First param of weight vector: <input class="changeParam" id="firstWV" type="range" min="-10" max="10"> <span id="i2"></span> <br>
-    Second param of weight vector: <input class="changeParam" id="secondWV" type="range" min="-10" max="10"> <span id="i3"></span> <br>
-    Third param of weight vector: <input class="changeParam" id="thirdWV" type="range" min="-10" max="10"> <span id="i4"></span> <br>
-    <br>
-    Opaque: <input class="changeParam" id="opaque" type="range" min="-10" max="10"> <span id="i5"></span> <br>
-    </p>
-		<div class="inputoutput">
-			BASE64:
-			<input type="file" onchange="encodeImageFileAsURL(this)">
-			<!-- <canvas id="canvasOutput"></canvas>
-			<canvas id="canvasSobelOutput"></canvas>
-			<div class="caption">canvasOutput</div> -->
-		</div>
-		<div id="cannyTest"></div>
-		<canvas id="canvasCroped"></canvas>
-	</div>
-  <canvas id="mid"></canvas>
+    <div>
+        <!-- <div class="inputoutput">
+      <img id="imageSrc" alt="No Image" / >
+      <div class="caption">imageSrc
+        <input type="file" id="fileInput" name="file" />
+      </div>
+    </div> -->
+        <p style="display: none;">
+            Min value of detected pixel of start\end of barcode:
+            <input id="valPix" type="range" min="0" max="255"> <span id="i1"></span>
+            <br>
+            <br> First param of weight vector:
+            <input class="changeParam" id="firstWV" type="range" min="-10" max="10"> <span id="i2"></span>
+            <br> Second param of weight vector:
+            <input class="changeParam" id="secondWV" type="range" min="-10" max="10"> <span id="i3"></span>
+            <br> Third param of weight vector:
+            <input class="changeParam" id="thirdWV" type="range" min="-10" max="10"> <span id="i4"></span>
+            <br>
+            <br> Opaque:
+            <input class="changeParam" id="opaque" type="range" min="-10" max="10"> <span id="i5"></span>
+            <br>
+        </p>
+        <div class="inputoutput">
+            BASE64:
+            <input type="file" onchange="encodeImageFileAsURL(this)">
+            <!-- <canvas id="canvasOutput"></canvas>
+      <canvas id="canvasSobelOutput"></canvas>
+      <div class="caption">canvasOutput</div> -->
+        </div>
+        <div id="cannyTest"></div>
+        <canvas id="canvasCroped"></canvas>
+    </div>
+    <canvas id="mid"></canvas>
 </body>
 <script src="jquery.min.js"></script>
 <script src="quagga.js"></script>
 <script src="tracking.js"></script>
 <script>
 function encodeImageFileAsURL(element) {
-        // /////////////////////
-        //  получаю полное изображениеб перевожу в BASE64
-        ////////////////////////
-	var file = element.files[0];
-	var reader = new FileReader();
-	reader.onloadend = function() {
-		console.log('RESULT', reader.result);
+    // /////////////////////
+    //  получаю полное изображениеб перевожу в BASE64
+    ////////////////////////
+    var file = element.files[0];
+    var reader = new FileReader();
+    reader.onloadend = function() {
+        console.log('RESULT', reader.result);
         // /////////////////////
         //  запускаю квагу на полное изображение в base64
         ////////////////////////
-		Quagga.decodeSingle({
-			decoder: {
-				readers: ["code_128_reader"]
-			},
-			locate: true,
-			src: reader.result, // or 'data:image/jpg;base64,' + data
-		}, function(result) {
-			if (result.codeResult) {
-        console.log('RESULT OF BARCODE READING: ', result.codeResult.code)
-        console.log('barcde value in string type', parseFloat(result.codeResult.code.replace(',', '.')))
-        // /////////////////////
-        //  получаю бокс с баркодом на полном изображении
-        ////////////////////////
-				var testFDW = result.boxes[0][0];
-				var testSDW = result.boxes[0][3];
-				var testFDH = result.boxes[0][0];
-				var testSDH = result.boxes[0][1];
-				var testW = Math.floor(Math.sqrt(Math.pow(testSDW[0] - testFDW[0], 2) + Math.pow(testSDW[1] - testFDW[1], 2)))
-				var testH = Math.floor(Math.sqrt(Math.pow(testSDH[1] - testFDH[1], 2) + Math.pow(testSDH[0] - testFDH[0], 2)))
-				console.log('TEST width: ', testW)
+        Quagga.decodeSingle({
+            decoder: {
+                readers: ["code_128_reader"]
+            },
+            locate: true,
+            src: reader.result, // or 'data:image/jpg;base64,' + data
+        }, function(result) {
+            if (result.codeResult) {
+                console.log('RESULT OF BARCODE READING: ', result.codeResult.code)
+                console.log('barcde value in string type', parseFloat(result.codeResult.code.replace(',', '.')))
+                // /////////////////////
+                //  получаю бокс с баркодом на полном изображении
+                ////////////////////////
+                var testFDW = result.boxes[0][0];
+                var testSDW = result.boxes[0][3];
+                var testFDH = result.boxes[0][0];
+                var testSDH = result.boxes[0][1];
+                var testW = Math.floor(Math.sqrt(Math.pow(testSDW[0] - testFDW[0], 2) + Math.pow(testSDW[1] - testFDW[1], 2)))
+                var testH = Math.floor(Math.sqrt(Math.pow(testSDH[1] - testFDH[1], 2) + Math.pow(testSDH[0] - testFDH[0], 2)))
+                console.log('TEST width: ', testW)
 
-				var barcodeValue = parseFloat(result.codeResult.code.replace(',', '.'));
-				var fullBarcodeW = testW;
-				var fullBarcodeH = testH;
+                var barcodeValue = parseFloat(result.codeResult.code.replace(',', '.'));
+                var fullBarcodeW = testW;
+                var fullBarcodeH = testH;
 
-				// var txtBase = document.getElementById('cannyTest');
-				// txtBase.innerHTML =   'Ширина баркода: ' + barcodeW + '<br>' + 'Значение баркода: ' + barcodeValue + '<br>' + 'В одном сантиметре '+ barcodeW / barcodeValue + ' пикселей';//'BASE64: ' + reader.result +
+                // var txtBase = document.getElementById('cannyTest');
+                // txtBase.innerHTML =   'Ширина баркода: ' + barcodeW + '<br>' + 'Значение баркода: ' + barcodeValue + '<br>' + 'В одном сантиметре '+ barcodeW / barcodeValue + ' пикселей';//'BASE64: ' + reader.result +
 
-				console.log('BOXES: ', result.boxes);
-				console.log('ANGLE: ', result.angle)
+                console.log('BOXES: ', result.boxes);
+                console.log('ANGLE: ', result.angle)
 
-				var canvas = document.getElementById('canvasCroped');
-				var context = canvas.getContext('2d');
+                var canvas = document.getElementById('canvasCroped');
+                var context = canvas.getContext('2d');
 
-				var img = new Image();
-				img.src = reader.result;
-				imgW = img.width;
-				imgH = img.height;
-				// canvas.width = imgW;
-				// canvas.height = imgH;
+                var img = new Image();
+                img.src = reader.result;
+                imgW = img.width;
+                imgH = img.height;
+                // canvas.width = imgW;
+                // canvas.height = imgH;
 
-        // /////////////////////
-        //  обрезаю изображение и вставляю в холст обрезанное и перевернутое изображение
-        ////////////////////////
-				start();
+                // /////////////////////
+                //  обрезаю изображение и вставляю в холст обрезанное и перевернутое изображение
+                ////////////////////////
+                start();
 
-				var croppedBarcodeData = canvas.toDataURL();
-				console.log('CROPPEDbarcodeDATA: ', croppedBarcodeData);
-
-
-        // /////////////////////
-        //  запускаю квагу на обрезанное изображение
-        ////////////////////////
-				Quagga.decodeSingle({
-					decoder: {
-						readers: ["code_128_reader"]
-					},
-					locate: true,
-					src: croppedBarcodeData // or 'data:image/jpg;base64,' + data
-				}, function(result) {
-					// if(result.codeResult) {
-					//   console.log("result", result.codeResult.code);
-					// } else {
-
-        // /////////////////////
-        //  если квага хотябы понимаю, что баркод на изображении есть - получаю еще один бокс
-        ////////////////////////
+                var croppedBarcodeData = canvas.toDataURL();
+                console.log('CROPPEDbarcodeDATA: ', croppedBarcodeData);
 
 
+                // /////////////////////
+                //  запускаю квагу на обрезанное изображение
+                ////////////////////////
+                Quagga.decodeSingle({
+                    decoder: {
+                        readers: ["code_128_reader"]
+                    },
+                    locate: true,
+                    src: croppedBarcodeData // or 'data:image/jpg;base64,' + data
+                }, function(result) {
+                    // if(result.codeResult) {
+                    //   console.log("result", result.codeResult.code);
+                    // } else {
+
+                    // /////////////////////
+                    //  если квага хотябы понимаю, что баркод на изображении есть - получаю еще один бокс
+                    ////////////////////////
 
 
-					//console.log("detected or not detected, who cares");          //
-					//var resImg = document.createElement('img')                   //
-					//resImg.src = croppedBarcodeData;                             //
-					//var divv = document.getElementById('cannyTest');             // просто создаю картинку, которую можно скачать на комп
-					//divv.appendChild(resImg)                                     //
 
 
-					console.log('ending boxes', result.boxes);                   
-					var endW = result.boxes[0][2][0] - result.boxes[0][0][0];    
-					console.log('THAT\'S WIDTH: ', endW)                         
-
-          
-          // вставляю в холст обрезаный баркод с фильтром на вертикальные полосы
-          // var copyImageData = imageData;
+                    //console.log("detected or not detected, who cares");          //
+                    //var resImg = document.createElement('img')                   //
+                    //resImg.src = croppedBarcodeData;                             //
+                    //var divv = document.getElementById('cannyTest');             // просто создаю картинку, которую можно скачать на комп
+                    //divv.appendChild(resImg)                                     //
 
 
-          var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-          // var copyImageData = copyImageData(context, imageData);
-          // Object.assign(copyImageData, imageData)
-          function setParam(firstWV, secondWV, thirdWV, opaque, valPix){
-            function copyImageData(ctx, src){
-                var dst = ctx.createImageData(src.width, src.height);
-                dst.data.set(src.data);
-                return dst;
+                    console.log('ending boxes', result.boxes);
+                    var endW = result.boxes[0][2][0] - result.boxes[0][0][0];
+                    console.log('THAT\'S WIDTH: ', endW)
+
+
+                    // вставляю в холст обрезаный баркод с фильтром на вертикальные полосы
+                    // var copyImageData = imageData;
+
+
+                    var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    // var copyImageData = copyImageData(context, imageData);
+                    // Object.assign(copyImageData, imageData)
+                    function setParam(firstWV, secondWV, thirdWV, opaque, valPix) {
+                        function copyImageData(ctx, src) {
+                            var dst = ctx.createImageData(src.width, src.height);
+                            dst.data.set(src.data);
+                            return dst;
+                        }
+                        var copyImageData = copyImageData(context, imageData);
+                        // context.putImageData(imageData, 0, 0);
+
+                        var testImageData = copyImageData;
+                        $('#i1').html(valPix)
+                        $('#i2').html(firstWV)
+                        $('#i3').html(secondWV)
+                        $('#i4').html(thirdWV)
+                        $('#i5').html(opaque)
+
+
+                        var verticalImgPix = tracking.Image.verticalConvolve(copyImageData.data, canvas.width, canvas.height, [firstWV, secondWV, thirdWV], opaque)
+                        console.log(firstWV, secondWV, thirdWV, opaque)
+
+                        for (i = 0; i < verticalImgPix.length; i++) {
+                            testImageData.data[i] = verticalImgPix[i];
+                        };
+                        context.clearRect(0, 0, canvas.width, canvas.height);
+                        context.putImageData(testImageData, 0, 0);
+
+
+
+                        changeParamFunc(165, verticalImgPix);
+                        $('#valPix').on('change', function() {
+                            changeParamFunc($(this).val(), verticalImgPix);
+                            $('#i1').html($(this).val())
+                        })
+                        console.log('put image data')
+                        // setTimeout(function(){
+                        //   context.clearRect(0, 0, canvas.width, canvas.height);
+                        //   context.putImageData(imageData, 0, 0);
+                        //   console.log('settimeout is ended')
+                        // }, 3000)
+                    }
+                    setParam(0, 1, 1, 1, 75)
+
+                    $('.changeParam').on('change', function() {
+                        setParam($('#firstWV').val(), $('#secondWV').val(), $('#thirdWV').val(), $('#opaque').val(), $('#valPix').val());
+                        console.log('onCh')
+                    })
+
+
+
+                    function changeParamFunc(maxPixVal, verticalImgPix) {
+                        for (i = 0; i < verticalImgPix.length; i++) {
+                            imageData.data[i] = verticalImgPix[i];
+                        };
+                        context.putImageData(imageData, 0, 0);
+
+
+                        // функция достает из списка один полный n-й пиксель из 4 значений
+                        function getFullPixel(data, position) {
+                            // var start = 4 * (position - 1) + 1;
+                            // console.log('Func start', start);
+                            var pix = {};
+                            pix.r = data[position];
+                            pix.g = data[position + 1];
+                            pix.b = data[position + 2];
+                            pix.a = data[position + 3];
+                            // console.log('func pix ', pix)
+                            return pix
+                        }
+
+
+                        // беру среднюю линию пикселей из обрезанного отфильтрованного изображения
+                        var midH = Math.floor(canvas.height / 2);
+                        console.log('MIIIIID H', midH)
+                        var midW = midH + canvas.width * 4;
+                        var middleLineData = imageData.data.slice(midH * midW, midH * midW + midW);
+                        var pixelsInMiddleLineData = Math.floor(middleLineData.length / 4);
+
+
+
+                        var startOfBarcode = 0;
+                        var endOfBarcode = 0;
+                        console.log('length', middleLineData.length)
+                        console.log('TRying ', middleLineData[250])
+                        console.log('ALL IMAGE DATA LENGTH', imageData.data.length)
+                        console.log('pixel example', getFullPixel(middleLineData, 150))
+
+                        // var mcanvas = document.getElementById('mid');
+                        // var mcontext = canvas.getContext('2d');
+                        // mcanvas.width = 530;
+                        // mcanvas.height = 1;
+                        // mcontext.createImageData(530, 100);
+                        // for(k=1; k<100; k++){
+
+                        //   mImgD = mcontext.getImageData(0,0,530,k);
+                        //   for (i=0; i<mImgD.data.length; i++){
+                        //     mImgD.data[i] = middleLineData[i]
+                        //   };
+                        // mcontext.putImageData(mImgD, 0, k)
+                        // }
+
+                        //////////////////////////
+                        // прохожу по этой линии с начала до первой полоски бракода, потом с конца до последней полоски баркода
+                        ///////////////////////
+                        for (i = 0; i < pixelsInMiddleLineData; i++) {
+                            // i is one pixel rgba
+                            var pixel = getFullPixel(middleLineData, i);
+
+                            if (pixel.r < maxPixVal && pixel.g < maxPixVal && pixel.b < maxPixVal) { //if this pixel is start
+                                console.log('FIRST IF')
+                                startOfBarcode = i;
+                                console.log('START PIXEL', startOfBarcode, pixel)
+
+                                // console.log('BACKWARDS LENTH', Math.floor(middleLineData.length/4))
+                                for (k = pixelsInMiddleLineData - 1; k > i; k--) {
+                                    var pixelBackwards = getFullPixel(middleLineData, k);
+
+                                    if (pixelBackwards.r < maxPixVal && pixelBackwards.g < maxPixVal && pixelBackwards.b < maxPixVal) {
+                                        console.log('SECOND IF')
+                                        endOfBarcode = k;
+                                        console.log('END PIXEL', endOfBarcode, pixelBackwards)
+                                        break;
+                                    } //else {
+                                    // console.log('Backwards pixel', pixelBackwards)
+                                    //}
+                                };
+                                break;
+                            }
+
+                        };
+
+                        var BARCODE_WIDTH = endOfBarcode - startOfBarcode;
+                        console.log('AAAAA I HOPE ITS FINAL ANSWER', BARCODE_WIDTH);
+                        console.log('valPix: ', maxPixVal)
+                        console.log('barcodeValue: ', barcodeValue)
+                        console.log('FINAL SOLVED ANSWER: В одном сантиметре ', BARCODE_WIDTH / barcodeValue, ' пикселей')
+                        var txtBase = document.getElementById('cannyTest');
+                        txtBase.innerHTML = 'В одном сантиметре ' + BARCODE_WIDTH / barcodeValue + ' пикселей'
+                    }
+
+                    // }
+                });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                function start() {
+
+                    // create 2 temporary canvases
+
+                    var canvas1 = document.createElement("canvas");
+                    var ctx1 = canvas1.getContext("2d");
+                    var canvas2 = document.createElement("canvas");
+                    var ctx2 = canvas2.getContext("2d");
+
+                    // get the boundingbox of the rotated blue box
+
+                    var rectBB = getRotatedRectBB(result.boxes[0][1][0], result.boxes[0][1][1], fullBarcodeW, fullBarcodeH, result.angle);
+
+                    // clip the boundingbox of the rotated blue rect
+                    // to a temporary canvas
+
+                    canvas1.width = canvas2.width = rectBB.width;
+                    canvas1.height = canvas2.height = rectBB.height;
+
+                    ctx1.drawImage(img,
+                        rectBB.cx - rectBB.width / 2,
+                        rectBB.cy - rectBB.height / 2,
+                        rectBB.width,
+                        rectBB.height,
+                        0, 0, rectBB.width, rectBB.height
+                    );
+
+                    // unrotate the blue rect on the temporary canvas
+
+                    ctx2.translate(canvas1.width / 2, canvas1.height / 2);
+                    ctx2.rotate(-result.angle);
+                    ctx2.drawImage(canvas1, -canvas1.width / 2, -canvas1.height / 2);
+
+                    // draw the blue rect to the display canvas
+
+                    var offX = 0 //rectBB.width / 2 - fullBarcodeW / 2; почему-то это мешает корректной работе в канвасе
+                    var offY = rectBB.height / 2 - fullBarcodeH / 2;
+
+                    canvas.width = fullBarcodeW;
+                    canvas.height = fullBarcodeH;
+                    console.log('TESTw TESTh: ', fullBarcodeW, fullBarcodeH)
+                    context.drawImage(canvas2, -offX, -offY);
+
+                } // end start
+
+
+
+                // Utility: get bounding box of rotated rectangle
+
+                function getRotatedRectBB(x, y, width, height, rAngle) {
+                    var absCos = Math.abs(Math.cos(rAngle));
+                    var absSin = Math.abs(Math.sin(rAngle));
+                    var cx = x + width / 2 * Math.cos(rAngle) - height / 2 * Math.sin(rAngle);
+                    var cy = y + width / 2 * Math.sin(rAngle) + height / 2 * Math.cos(rAngle);
+                    var w = width //* absCos + height * absSin;   мешает корректной работе
+                    var h = width * absSin + height * absCos;
+                    return ({ cx: cx, cy: cy, width: w, height: h });
+                }
+
+            } else {
+                console.log("not detected", result);
             }
-            var copyImageData = copyImageData(context, imageData);
-            // context.putImageData(imageData, 0, 0);
+        });
 
-            var testImageData = copyImageData;
-            $('#i1').html(valPix)
-            $('#i2').html(firstWV)
-            $('#i3').html(secondWV)
-            $('#i4').html(thirdWV)
-            $('#i5').html(opaque)
-
-
-            var verticalImgPix = tracking.Image.verticalConvolve(copyImageData.data, canvas.width, canvas.height, [firstWV, secondWV, thirdWV], opaque)
-            console.log(firstWV, secondWV, thirdWV, opaque)
-            
-            for (i = 0; i < verticalImgPix.length; i++) {
-              testImageData.data[i] = verticalImgPix[i];
-            };
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            context.putImageData(testImageData, 0, 0);
-
-
-
-            changeParamFunc(165, verticalImgPix);
-            $('#valPix').on('change', function(){
-              changeParamFunc($(this).val(), verticalImgPix);
-              $('#i1').html($(this).val())
-            })
-            console.log('put image data')
-            // setTimeout(function(){
-            //   context.clearRect(0, 0, canvas.width, canvas.height);
-            //   context.putImageData(imageData, 0, 0);
-            //   console.log('settimeout is ended')
-            // }, 3000)
-          }
-          setParam(0,1,1,1, 75)
-
-          $('.changeParam').on('change', function(){
-            setParam($('#firstWV').val(), $('#secondWV').val(), $('#thirdWV').val(), $('#opaque').val(), $('#valPix').val());
-            console.log('onCh')
-          })
-
-          
-
-          function changeParamFunc(maxPixVal, verticalImgPix){
-  					for (i = 0; i < verticalImgPix.length; i++) {
-  						imageData.data[i] = verticalImgPix[i];
-  					};
-            context.putImageData(imageData, 0, 0);
-
-
-            // функция достает из списка один полный n-й пиксель из 4 значений
-            function getFullPixel(data, position){
-              // var start = 4 * (position - 1) + 1;
-              // console.log('Func start', start);
-              var    pix = {};
-                  pix.r = data[position];
-                  pix.g = data[position+1];
-                  pix.b = data[position+2];
-                  pix.a = data[position+3];
-                  // console.log('func pix ', pix)
-              return pix
-            }
-
-
-            // беру среднюю линию пикселей из обрезанного отфильтрованного изображения
-            var midH = Math.floor(canvas.height / 2);
-            console.log('MIIIIID H', midH)
-            var midW = midH + canvas.width*4;
-            var middleLineData = imageData.data.slice(midH*midW, midH*midW + midW);
-            var pixelsInMiddleLineData = Math.floor(middleLineData.length/4);
-
-
-
-            var startOfBarcode = 0;
-            var endOfBarcode = 0;
-            console.log('length',middleLineData.length)
-            console.log('TRying ', middleLineData[250])
-            console.log('ALL IMAGE DATA LENGTH', imageData.data.length)
-            console.log('pixel example', getFullPixel(middleLineData, 150))
-            
-            // var mcanvas = document.getElementById('mid');
-            // var mcontext = canvas.getContext('2d');
-            // mcanvas.width = 530;
-            // mcanvas.height = 1;
-            // mcontext.createImageData(530, 100);
-            // for(k=1; k<100; k++){
-
-            //   mImgD = mcontext.getImageData(0,0,530,k);
-            //   for (i=0; i<mImgD.data.length; i++){
-            //     mImgD.data[i] = middleLineData[i]
-            //   };
-            // mcontext.putImageData(mImgD, 0, k)
-            // }
-
-            //////////////////////////
-            // прохожу по этой линии с начала до первой полоски бракода, потом с конца до последней полоски баркода
-            ///////////////////////
-            for (i=0; i<pixelsInMiddleLineData; i++){
-              // i is one pixel rgba
-              var pixel = getFullPixel(middleLineData,  i);
-              
-                  if (pixel.r <maxPixVal && pixel.g <maxPixVal && pixel.b <maxPixVal ) {//if this pixel is start
-                    console.log('FIRST IF')
-                      startOfBarcode = i;
-                      console.log('START PIXEL', startOfBarcode, pixel)
-
-                      // console.log('BACKWARDS LENTH', Math.floor(middleLineData.length/4))
-                      for (k=pixelsInMiddleLineData-1; k>i; k--){
-                        var pixelBackwards = getFullPixel(middleLineData,  k);
-
-                        if (pixelBackwards.r <maxPixVal && pixelBackwards.g <maxPixVal && pixelBackwards.b <maxPixVal){
-                          console.log('SECOND IF')
-                          endOfBarcode = k;
-                          console.log('END PIXEL', endOfBarcode, pixelBackwards)
-                          break;
-                        } //else {
-                          // console.log('Backwards pixel', pixelBackwards)
-                        //}
-                      };
-                      break;
-                  }
-              
-            };
-
-            var BARCODE_WIDTH = endOfBarcode - startOfBarcode;
-            console.log('AAAAA I HOPE ITS FINAL ANSWER', BARCODE_WIDTH);
-            console.log('valPix: ', maxPixVal)
-            console.log('barcodeValue: ', barcodeValue)
-            console.log('FINAL SOLVED ANSWER: В одном сантиметре ', BARCODE_WIDTH / barcodeValue, ' пикселей'  )
-            var txtBase = document.getElementById('cannyTest');
-            txtBase.innerHTML = 'В одном сантиметре ' + BARCODE_WIDTH / barcodeValue + ' пикселей'
-          }
-
-					// }
-				});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-				function start() {
-
-					// create 2 temporary canvases
-
-					var canvas1 = document.createElement("canvas");
-					var ctx1 = canvas1.getContext("2d");
-					var canvas2 = document.createElement("canvas");
-					var ctx2 = canvas2.getContext("2d");
-
-					// get the boundingbox of the rotated blue box
-
-					var rectBB = getRotatedRectBB(result.boxes[0][1][0], result.boxes[0][1][1], fullBarcodeW, fullBarcodeH, result.angle);
-
-					// clip the boundingbox of the rotated blue rect
-					// to a temporary canvas
-
-					canvas1.width = canvas2.width = rectBB.width;
-					canvas1.height = canvas2.height = rectBB.height;
-
-					ctx1.drawImage(img,
-						rectBB.cx - rectBB.width / 2,
-						rectBB.cy - rectBB.height / 2,
-						rectBB.width,
-						rectBB.height,
-						0, 0, rectBB.width, rectBB.height
-					);
-
-					// unrotate the blue rect on the temporary canvas
-
-					ctx2.translate(canvas1.width / 2, canvas1.height / 2);
-					ctx2.rotate(-result.angle);
-					ctx2.drawImage(canvas1, -canvas1.width / 2, -canvas1.height / 2);
-
-					// draw the blue rect to the display canvas
-
-					var offX = 0//rectBB.width / 2 - fullBarcodeW / 2; почему-то это мешает корректной работе в канвасе
-					var offY = rectBB.height / 2 - fullBarcodeH / 2;
-
-					canvas.width = fullBarcodeW;
-					canvas.height = fullBarcodeH;
-					console.log('TESTw TESTh: ', fullBarcodeW, fullBarcodeH)
-					context.drawImage(canvas2, -offX, -offY);
-
-				} // end start
-
-
-
-				// Utility: get bounding box of rotated rectangle
-
-				function getRotatedRectBB(x, y, width, height, rAngle) {
-					var absCos = Math.abs(Math.cos(rAngle));
-					var absSin = Math.abs(Math.sin(rAngle));
-					var cx = x + width / 2 * Math.cos(rAngle) - height / 2 * Math.sin(rAngle);
-					var cy = y + width / 2 * Math.sin(rAngle) + height / 2 * Math.cos(rAngle);
-					var w = width //* absCos + height * absSin;   мешает корректной работе
-					var h = width * absSin + height * absCos;
-					return ({ cx: cx, cy: cy, width: w, height: h });
-				}
-
-			} else {
-				console.log("not detected", result);
-			}
-		});
-
-	}
-	reader.readAsDataURL(file);
+    }
+    reader.readAsDataURL(file);
 }
 </script>
 
