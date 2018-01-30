@@ -14,6 +14,13 @@
 				<input type="file" id="fileInput" name="file" />
 			</div>
 		</div> -->
+    Min value of detected pixel of start\end of barcode: <input  id="valPix" type="range" min="0" max="255"> <span id="i1"></span> <br>
+    <br>
+    First param of weight vector: <input class="changeParam" id="firstWV" type="range" min="-10" max="10"> <span id="i2"></span> <br>
+    Second param of weight vector: <input class="changeParam" id="secondWV" type="range" min="-10" max="10"> <span id="i3"></span> <br>
+    Third param of weight vector: <input class="changeParam" id="thirdWV" type="range" min="-10" max="10"> <span id="i4"></span> <br>
+    <br>
+    Opaque: <input class="changeParam" id="opaque" type="range" min="-10" max="10"> <span id="i5"></span> <br>
 		<div class="inputoutput">
 			BASE64:
 			<input type="file" onchange="encodeImageFileAsURL(this)">
@@ -26,6 +33,7 @@
 	</div>
   <canvas id="mid"></canvas>
 </body>
+<script src="../jquery.min.js"></script>
 <script src="quagga.js"></script>
 <script src="../tracking.js"></script>
 <script>
@@ -48,6 +56,8 @@ function encodeImageFileAsURL(element) {
 			src: reader.result, // or 'data:image/jpg;base64,' + data
 		}, function(result) {
 			if (result.codeResult) {
+        console.log('RESULT OF BARCODE READING: ', result.codeResult.code)
+        console.log('barcde value in string type', parseFloat(result.codeResult.code.replace(',', '.')))
         // /////////////////////
         //  получаю бокс с баркодом на полном изображении
         ////////////////////////
@@ -59,7 +69,7 @@ function encodeImageFileAsURL(element) {
 				var testH = Math.floor(Math.sqrt(Math.pow(testSDH[1] - testFDH[1], 2) + Math.pow(testSDH[0] - testFDH[0], 2)))
 				console.log('TEST width: ', testW)
 
-				var barcodeValue = parseInt(result.codeResult.code);
+				var barcodeValue = parseFloat(result.codeResult.code.replace(',', '.'));
 				var fullBarcodeW = testW;
 				var fullBarcodeH = testH;
 
@@ -109,103 +119,161 @@ function encodeImageFileAsURL(element) {
 
 
 
-					console.log("detected or not detected, who cares");          //
-					var resImg = document.createElement('img')                   //
-					resImg.src = croppedBarcodeData;                             //
-					var divv = document.getElementById('cannyTest');             // просто создаю картинку, которую можно скачать на комп
-					divv.appendChild(resImg)                                     //
+					//console.log("detected or not detected, who cares");          //
+					//var resImg = document.createElement('img')                   //
+					//resImg.src = croppedBarcodeData;                             //
+					//var divv = document.getElementById('cannyTest');             // просто создаю картинку, которую можно скачать на комп
+					//divv.appendChild(resImg)                                     //
 
 
 					console.log('ending boxes', result.boxes);                   
 					var endW = result.boxes[0][2][0] - result.boxes[0][0][0];    
 					console.log('THAT\'S WIDTH: ', endW)                         
 
-
-          // вставляю в холст обрезаный баркод с фильтром на вертикальные полосы
-          var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-          var verticalImgPix = tracking.Image.verticalConvolve(imageData.data, canvas.width, canvas.height, [1,1.5,-1], 5)
-					for (i = 0; i < verticalImgPix.length; i++) {
-						imageData.data[i] = verticalImgPix[i];
-					};
-          context.putImageData(imageData, 0, 0);
-
-
-          // функция достает из imageData один полный n-й пиксель из 4 значений
-          function getFullPixel(data, position){
-            // var start = 4 * (position - 1) + 1;
-            // console.log('Func start', start);
-            var    pix = {};
-                pix.r = data[position];
-                pix.g = data[position+1];
-                pix.b = data[position+2];
-                pix.a = data[position+3];
-                // console.log('func pix ', pix)
-            return pix
-          }
-
-
-          // беру среднюю линию пикселей из обрезанного отфильтрованного изображения
-          var midH = Math.floor(canvas.height / 2);
-          console.log('MIIIIID H', midH)
-          var midW = midH + canvas.width*4;
-          var middleLineData = imageData.data.slice(midH*midW, midH*midW + midW);
-          var pixelsInMiddleLineData = Math.floor(middleLineData.length/4);
-
-
-
-          var startOfBarcode = 0;
-          var endOfBarcode = 0;
-          console.log('length',middleLineData.length)
-          console.log('TRying ', middleLineData[250])
-          console.log('ALL IMAGE DATA LENGTH', imageData.data.length)
-          console.log('pixel example', getFullPixel(middleLineData, 150))
           
-          // var mcanvas = document.getElementById('mid');
-          // var mcontext = canvas.getContext('2d');
-          // mcanvas.width = 530;
-          // mcanvas.height = 1;
-          // mcontext.createImageData(530, 100);
-          // for(k=1; k<100; k++){
+          // вставляю в холст обрезаный баркод с фильтром на вертикальные полосы
+          // var copyImageData = imageData;
 
-          //   mImgD = mcontext.getImageData(0,0,530,k);
-          //   for (i=0; i<mImgD.data.length; i++){
-          //     mImgD.data[i] = middleLineData[i]
-          //   };
-          // mcontext.putImageData(mImgD, 0, k)
-          // }
 
-          //////////////////////////
-          // прохожу по этой линии с начала до первой полоски бракода, потом с конца до последней полоски баркода
-          ///////////////////////
-          for (i=0; i<pixelsInMiddleLineData; i++){
-            // i is one pixel rgba
-            var pixel = getFullPixel(middleLineData,  i);
+          var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+          // var copyImageData = copyImageData(context, imageData);
+          // Object.assign(copyImageData, imageData)
+          function setParam(firstWV, secondWV, thirdWV, opaque, valPix){
+            function copyImageData(ctx, src){
+                var dst = ctx.createImageData(src.width, src.height);
+                dst.data.set(src.data);
+                return dst;
+            }
+            var copyImageData = copyImageData(context, imageData);
+            // context.putImageData(imageData, 0, 0);
+
+            var testImageData = copyImageData;
+            $('#i1').html(valPix)
+            $('#i2').html(firstWV)
+            $('#i3').html(secondWV)
+            $('#i4').html(thirdWV)
+            $('#i5').html(opaque)
+
+
+            var verticalImgPix = tracking.Image.verticalConvolve(copyImageData.data, canvas.width, canvas.height, [firstWV, secondWV, thirdWV], opaque)
+            console.log(firstWV, secondWV, thirdWV, opaque)
             
-                if (pixel.r <75 && pixel.g <75 && pixel.b <75 ) {//if this pixel is start
-                  console.log('FIRST IF')
-                    startOfBarcode = i;
-                    console.log('START PIXEL', startOfBarcode, pixel)
+            for (i = 0; i < verticalImgPix.length; i++) {
+              testImageData.data[i] = verticalImgPix[i];
+            };
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.putImageData(testImageData, 0, 0);
 
-                    // console.log('BACKWARDS LENTH', Math.floor(middleLineData.length/4))
-                    for (k=pixelsInMiddleLineData-1; k>i; k--){
-                      var pixelBackwards = getFullPixel(middleLineData,  k);
 
-                      if (pixelBackwards.r <75 && pixelBackwards.g <75 && pixelBackwards.b <75){
-                        console.log('SECOND IF')
-                        endOfBarcode = k;
-                        console.log('END PIXEL', endOfBarcode, pixelBackwards)
-                        break;
-                      } //else {
-                        // console.log('Backwards pixel', pixelBackwards)
-                      //}
-                    };
-                    break;
-                }
+
+            changeParamFunc(165, verticalImgPix);
+            $('#valPix').on('change', function(){
+              changeParamFunc($(this).val(), verticalImgPix);
+              $('#i1').html($(this).val())
+            })
+            console.log('put image data')
+            // setTimeout(function(){
+            //   context.clearRect(0, 0, canvas.width, canvas.height);
+            //   context.putImageData(imageData, 0, 0);
+            //   console.log('settimeout is ended')
+            // }, 3000)
+          }
+          setParam(0,1,1,1, 75)
+
+          $('.changeParam').on('change', function(){
+            setParam($('#firstWV').val(), $('#secondWV').val(), $('#thirdWV').val(), $('#opaque').val(), $('#valPix').val());
+            console.log('onCh')
+          })
+
+          
+
+          function changeParamFunc(maxPixVal, verticalImgPix){
+  					for (i = 0; i < verticalImgPix.length; i++) {
+  						imageData.data[i] = verticalImgPix[i];
+  					};
+            context.putImageData(imageData, 0, 0);
+
+
+            // функция достает из списка один полный n-й пиксель из 4 значений
+            function getFullPixel(data, position){
+              // var start = 4 * (position - 1) + 1;
+              // console.log('Func start', start);
+              var    pix = {};
+                  pix.r = data[position];
+                  pix.g = data[position+1];
+                  pix.b = data[position+2];
+                  pix.a = data[position+3];
+                  // console.log('func pix ', pix)
+              return pix
+            }
+
+
+            // беру среднюю линию пикселей из обрезанного отфильтрованного изображения
+            var midH = Math.floor(canvas.height / 2);
+            console.log('MIIIIID H', midH)
+            var midW = midH + canvas.width*4;
+            var middleLineData = imageData.data.slice(midH*midW, midH*midW + midW);
+            var pixelsInMiddleLineData = Math.floor(middleLineData.length/4);
+
+
+
+            var startOfBarcode = 0;
+            var endOfBarcode = 0;
+            console.log('length',middleLineData.length)
+            console.log('TRying ', middleLineData[250])
+            console.log('ALL IMAGE DATA LENGTH', imageData.data.length)
+            console.log('pixel example', getFullPixel(middleLineData, 150))
             
-          };
+            // var mcanvas = document.getElementById('mid');
+            // var mcontext = canvas.getContext('2d');
+            // mcanvas.width = 530;
+            // mcanvas.height = 1;
+            // mcontext.createImageData(530, 100);
+            // for(k=1; k<100; k++){
 
-          var BARCODE_WIDTH = endOfBarcode - startOfBarcode;
-          console.log('AAAAA I HOPE ITS FINAL ANSWER', BARCODE_WIDTH);
+            //   mImgD = mcontext.getImageData(0,0,530,k);
+            //   for (i=0; i<mImgD.data.length; i++){
+            //     mImgD.data[i] = middleLineData[i]
+            //   };
+            // mcontext.putImageData(mImgD, 0, k)
+            // }
+
+            //////////////////////////
+            // прохожу по этой линии с начала до первой полоски бракода, потом с конца до последней полоски баркода
+            ///////////////////////
+            for (i=0; i<pixelsInMiddleLineData; i++){
+              // i is one pixel rgba
+              var pixel = getFullPixel(middleLineData,  i);
+              
+                  if (pixel.r <maxPixVal && pixel.g <maxPixVal && pixel.b <maxPixVal ) {//if this pixel is start
+                    console.log('FIRST IF')
+                      startOfBarcode = i;
+                      console.log('START PIXEL', startOfBarcode, pixel)
+
+                      // console.log('BACKWARDS LENTH', Math.floor(middleLineData.length/4))
+                      for (k=pixelsInMiddleLineData-1; k>i; k--){
+                        var pixelBackwards = getFullPixel(middleLineData,  k);
+
+                        if (pixelBackwards.r <maxPixVal && pixelBackwards.g <maxPixVal && pixelBackwards.b <maxPixVal){
+                          console.log('SECOND IF')
+                          endOfBarcode = k;
+                          console.log('END PIXEL', endOfBarcode, pixelBackwards)
+                          break;
+                        } //else {
+                          // console.log('Backwards pixel', pixelBackwards)
+                        //}
+                      };
+                      break;
+                  }
+              
+            };
+
+            var BARCODE_WIDTH = endOfBarcode - startOfBarcode;
+            console.log('AAAAA I HOPE ITS FINAL ANSWER', BARCODE_WIDTH);
+            console.log('valPix: ', maxPixVal)
+            console.log('barcodeValue: ', barcodeValue)
+            console.log('FINAL SOLVED ANSWER: В одном сантиметре ', BARCODE_WIDTH / barcodeValue, ' пикселей'  )
+          }
 
 					// }
 				});
