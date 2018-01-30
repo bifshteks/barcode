@@ -14,6 +14,7 @@
 				<input type="file" id="fileInput" name="file" />
 			</div>
 		</div> -->
+    <p style="display: none;">
     Min value of detected pixel of start\end of barcode: <input  id="valPix" type="range" min="0" max="255"> <span id="i1"></span> <br>
     <br>
     First param of weight vector: <input class="changeParam" id="firstWV" type="range" min="-10" max="10"> <span id="i2"></span> <br>
@@ -21,6 +22,7 @@
     Third param of weight vector: <input class="changeParam" id="thirdWV" type="range" min="-10" max="10"> <span id="i4"></span> <br>
     <br>
     Opaque: <input class="changeParam" id="opaque" type="range" min="-10" max="10"> <span id="i5"></span> <br>
+    </p>
 		<div class="inputoutput">
 			BASE64:
 			<input type="file" onchange="encodeImageFileAsURL(this)">
@@ -273,6 +275,8 @@ function encodeImageFileAsURL(element) {
             console.log('valPix: ', maxPixVal)
             console.log('barcodeValue: ', barcodeValue)
             console.log('FINAL SOLVED ANSWER: В одном сантиметре ', BARCODE_WIDTH / barcodeValue, ' пикселей'  )
+            var txtBase = document.getElementById('cannyTest');
+            txtBase.innerHTML = 'В одном сантиметре ' + BARCODE_WIDTH / barcodeValue + ' пикселей'
           }
 
 					// }
