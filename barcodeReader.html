@@ -49,7 +49,6 @@ function encodeImageFileAsURL(element) {
     var file = element.files[0];
     var reader = new FileReader();
     reader.onloadend = function() {
-        console.log('RESULT', reader.result);
         // /////////////////////
         //  запускаю квагу на полное изображение в base64
         ////////////////////////
@@ -70,7 +69,6 @@ function encodeImageFileAsURL(element) {
                 var testSDH = result.boxes[0][1];
                 var testW = Math.floor(Math.sqrt(Math.pow(testSDW[0] - testFDW[0], 2) + Math.pow(testSDW[1] - testFDW[1], 2)))
                 var testH = Math.floor(Math.sqrt(Math.pow(testSDH[1] - testFDH[1], 2) + Math.pow(testSDH[0] - testFDH[0], 2)))
-                console.log('TEST width: ', testW)
 
                 var barcodeValue = parseFloat(result.codeResult.code.replace(',', '.'));
                 var fullBarcodeW = testW;
@@ -90,11 +88,9 @@ function encodeImageFileAsURL(element) {
                 // /////////////////////
                 //  обрезаю изображение и вставляю в холст обрезанное и перевернутое изображение
                 ////////////////////////
-                start();
+                createCanvasWithCroppedBarcode();
 
                 var croppedBarcodeData = canvas.toDataURL();
-                console.log('CROPPEDbarcodeDATA: ', croppedBarcodeData);
-
 
                 // /////////////////////
                 //  запускаю квагу на обрезанное изображение
@@ -108,23 +104,13 @@ function encodeImageFileAsURL(element) {
                 }, function(result) {
 
                     // /////////////////////
-                    //  если квага хотя бы понимаtn, что баркод на изображении есть - получаю еще один бокс
-                    ////////////////////////
-
-
-
-
-                    //console.log("detected or not detected, who cares");          //
-                    //var resImg = document.createElement('img')                   //
-                    //resImg.src = croppedBarcodeData;                             //
-                    //var divv = document.getElementById('cannyTest');             // просто создаю картинку, которую можно скачать на комп
-                    //divv.appendChild(resImg)                                     //
-
-                    /////////////////////////////////////
+                    //  если квага хотя бы понимает, что баркод на изображении есть - получаю еще один бокс
+                    //
                     // вставляю в холст обрезаный баркод с фильтром на вертикальные полосы
                     /////////////////////////////////////
                     var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
                     function setParam(firstWV, secondWV, thirdWV, opaque, valPix) {
+
                         function copyImageData(ctx, src) {
                             var dst = ctx.createImageData(src.width, src.height);
                             dst.data.set(src.data);
@@ -140,7 +126,6 @@ function encodeImageFileAsURL(element) {
                         $('#i5').html(opaque)
 
                         var verticalImgPix = tracking.Image.verticalConvolve(copyImageData.data, canvas.width, canvas.height, [firstWV, secondWV, thirdWV], opaque)
-                        console.log(firstWV, secondWV, thirdWV, opaque)
 
                         for (i = 0; i < verticalImgPix.length; i++) {
                             testImageData.data[i] = verticalImgPix[i];
@@ -148,17 +133,16 @@ function encodeImageFileAsURL(element) {
                         context.clearRect(0, 0, canvas.width, canvas.height);
                         context.putImageData(testImageData, 0, 0);
 
-                        changeParamFunc(165, verticalImgPix);
+                        changeParamFunc(valPix, verticalImgPix);
                         $('#valPix').on('change', function() {
                             changeParamFunc($(this).val(), verticalImgPix);
                             $('#i1').html($(this).val())
                         })
                     }
-                    setParam(0, 1, 1, 1, 75)
+                    setParam(0, 1, 1, 1, 165);
 
                     $('.changeParam').on('change', function() {
                         setParam($('#firstWV').val(), $('#secondWV').val(), $('#thirdWV').val(), $('#opaque').val(), $('#valPix').val());
-                        console.log('onCh')
                     })
 
 
@@ -176,7 +160,6 @@ function encodeImageFileAsURL(element) {
                             pix.g = data[position + 1];
                             pix.b = data[position + 2];
                             pix.a = data[position + 3];
-                            // console.log('func pix ', pix)
                             return pix
                         }
 
@@ -184,7 +167,6 @@ function encodeImageFileAsURL(element) {
                         // беру среднюю линию пикселей из обрезанного отфильтрованного изображения
                         /////////////////////////
                         var midH = Math.floor(canvas.height / 2);
-                        console.log('MIIIIID H', midH)
                         var midW = midH + canvas.width * 4;
                         var middleLineData = imageData.data.slice(midH * midW, midH * midW + midW);
                         var pixelsInMiddleLineData = Math.floor(middleLineData.length / 4);
@@ -217,14 +199,13 @@ function encodeImageFileAsURL(element) {
                         var BARCODE_WIDTH = endOfBarcode - startOfBarcode;
                         console.log('barcodeValue: ', barcodeValue)
                         console.log('В одном сантиметре ', BARCODE_WIDTH / barcodeValue, ' пикселей')
-                        var txtBase = document.getElementById('cannyTest');
-                        txtBase.innerHTML = 'В одном сантиметре ' + BARCODE_WIDTH / barcodeValue + ' пикселей'
+                        $('#cannyTest').html('В одном сантиметре ' + BARCODE_WIDTH / barcodeValue + ' пикселей')
                     }
                 });
 
 
-                function start() {
-                  
+                function createCanvasWithCroppedBarcode() {
+
                     // create 2 temporary canvases
 
                     var canvas1 = document.createElement("canvas");
@@ -263,10 +244,9 @@ function encodeImageFileAsURL(element) {
 
                     canvas.width = fullBarcodeW;
                     canvas.height = fullBarcodeH;
-                    console.log('TESTw TESTh: ', fullBarcodeW, fullBarcodeH)
                     context.drawImage(canvas2, -offX, -offY);
 
-                } // end start
+                }
 
 
 
