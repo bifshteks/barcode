@@ -34,9 +34,9 @@
             <input type="file" onchange="encodeImageFileAsURL(this)">
         </div>
         <canvas id="canvasCroped"></canvas>
-        <div id="cannyTest"></div>
+        <div id="feedback"></div>
     </div>
-    <canvas id="mid"></canvas>
+    <!-- <canvas id="mid"></canvas> -->
 </body>
 <script src="jquery.min.js"></script>
 <script src="quagga.js"></script>
@@ -49,6 +49,11 @@ function encodeImageFileAsURL(element) {
     var file = element.files[0];
     var reader = new FileReader();
     reader.onloadend = function() {
+        $('#feedback').html('');
+        canvasToClean = document.getElementById('canvasCroped');
+        contextToClean = canvasToClean.getContext('2d');
+        contextToClean.clearRect(0, 0, canvasToClean.width, canvasToClean.height);
+
         // /////////////////////
         //  запускаю квагу на полное изображение в base64
         ////////////////////////
@@ -59,7 +64,7 @@ function encodeImageFileAsURL(element) {
             locate: true,
             src: reader.result,
         }, function(result) {
-            if (result.codeResult) {
+            if ( result != undefined && result.codeResult ) {
                 // /////////////////////
                 //  получаю бокс с баркодом на полном изображении
                 ////////////////////////
@@ -88,123 +93,118 @@ function encodeImageFileAsURL(element) {
                 // /////////////////////
                 //  обрезаю изображение и вставляю в холст обрезанное и перевернутое изображение
                 ////////////////////////
-                createCanvasWithCroppedBarcode();
+                insertCroppedBarcodeIntoCanvas(canvas, result.boxes[0][1][0], result.boxes[0][1][1], fullBarcodeW, fullBarcodeH, result.angle);
 
                 var croppedBarcodeData = canvas.toDataURL();
 
                 // /////////////////////
-                //  запускаю квагу на обрезанное изображение
-                ////////////////////////
-                Quagga.decodeSingle({
-                    decoder: {
-                        readers: ["code_128_reader"]
-                    },
-                    locate: true,
-                    src: croppedBarcodeData 
-                }, function(result) {
+                // вставляю в холст обрезаный баркод с фильтром на вертикальные полосы
+                /////////////////////////////////////
+                var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
 
-                    // /////////////////////
-                    //  если квага хотя бы понимает, что баркод на изображении есть - получаю еще один бокс
-                    //
-                    // вставляю в холст обрезаный баркод с фильтром на вертикальные полосы
-                    /////////////////////////////////////
-                    var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                    function setParam(firstWV, secondWV, thirdWV, opaque, valPix) {
 
-                        function copyImageData(ctx, src) {
-                            var dst = ctx.createImageData(src.width, src.height);
-                            dst.data.set(src.data);
-                            return dst;
-                        }
-                        var copyImageData = copyImageData(context, imageData);
+                function setParam(firstWV, secondWV, thirdWV, opaque, valPix) {
+                    // применяет к холсту эффекты с заданными параметрами
 
-                        var testImageData = copyImageData;
-                        $('#i1').html(valPix)
-                        $('#i2').html(firstWV)
-                        $('#i3').html(secondWV)
-                        $('#i4').html(thirdWV)
-                        $('#i5').html(opaque)
 
-                        var verticalImgPix = tracking.Image.verticalConvolve(copyImageData.data, canvas.width, canvas.height, [firstWV, secondWV, thirdWV], opaque)
-
-                        for (i = 0; i < verticalImgPix.length; i++) {
-                            testImageData.data[i] = verticalImgPix[i];
-                        };
-                        context.clearRect(0, 0, canvas.width, canvas.height);
-                        context.putImageData(testImageData, 0, 0);
-
-                        changeParamFunc(valPix, verticalImgPix);
-                        $('#valPix').on('change', function() {
-                            changeParamFunc($(this).val(), verticalImgPix);
-                            $('#i1').html($(this).val())
-                        })
+                    function copyImageData(ctx, src) {
+                        var dst = ctx.createImageData(src.width, src.height);
+                        dst.data.set(src.data);
+                        return dst;
                     }
-                    setParam(0, 1, 1, 1, 165);
+                    var copyImageData = copyImageData(context, imageData);
 
-                    $('.changeParam').on('change', function() {
-                        setParam($('#firstWV').val(), $('#secondWV').val(), $('#thirdWV').val(), $('#opaque').val(), $('#valPix').val());
+                    var testImageData = copyImageData;
+                    $('#i1').html(valPix)
+                    $('#i2').html(firstWV)
+                    $('#i3').html(secondWV)
+                    $('#i4').html(thirdWV)
+                    $('#i5').html(opaque)
+
+                    var verticalImgPix = tracking.Image.verticalConvolve(copyImageData.data, canvas.width, canvas.height, [firstWV, secondWV, thirdWV], opaque)
+
+                    for (i = 0; i < verticalImgPix.length; i++) {
+                        testImageData.data[i] = verticalImgPix[i];
+                    };
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    context.putImageData(testImageData, 0, 0);
+
+                    changeParamFunc(valPix, verticalImgPix);
+                    $('#valPix').on('change', function() {
+                        changeParamFunc($(this).val(), verticalImgPix);
+                        $('#i1').html($(this).val())
                     })
+                }
+                setParam(0, 1, 1, 1, 165);
+
+                // Возможность удобно поменять параметры эфффектов на изображении
+                $('.changeParam').on('change', function() {
+                    setParam($('#firstWV').val(), $('#secondWV').val(), $('#thirdWV').val(), $('#opaque').val(), $('#valPix').val());
+                })
 
 
-                    function changeParamFunc(maxPixVal, verticalImgPix) {
-                        for (i = 0; i < verticalImgPix.length; i++) {
-                            imageData.data[i] = verticalImgPix[i];
-                        };
-                        context.putImageData(imageData, 0, 0);
+                function changeParamFunc(maxPixVal, verticalImgPix) {
+
+                    // меняет изображение на холсте
+                    for (i = 0; i < verticalImgPix.length; i++) {
+                        imageData.data[i] = verticalImgPix[i];
+                    };
+                    context.putImageData(imageData, 0, 0);
 
 
-                        function getFullPixel(data, position) {
-                            // функция достает из списка один полный n-й пиксель из 4 значений
-                            var pix = {};
-                            pix.r = data[position];
-                            pix.g = data[position + 1];
-                            pix.b = data[position + 2];
-                            pix.a = data[position + 3];
-                            return pix
-                        }
-
-                        /////////////////////////
-                        // беру среднюю линию пикселей из обрезанного отфильтрованного изображения
-                        /////////////////////////
-                        var midH = Math.floor(canvas.height / 2);
-                        var midW = midH + canvas.width * 4;
-                        var middleLineData = imageData.data.slice(midH * midW, midH * midW + midW);
-                        var pixelsInMiddleLineData = Math.floor(middleLineData.length / 4);
-
-                        var startOfBarcode = 0;
-                        var endOfBarcode = 0;
-
-                        //////////////////////////
-                        // прохожу по этой линии с начала до первой полоски бракода, потом с конца до последней полоски баркода
-                        ///////////////////////
-                        for (i = 0; i < pixelsInMiddleLineData; i++) {
-                            // 'i' is one pixel rgba
-                            var pixel = getFullPixel(middleLineData, i);
-
-                            if (pixel.r < maxPixVal && pixel.g < maxPixVal && pixel.b < maxPixVal) { //if this pixel is start
-                                startOfBarcode = i;
-
-                                for (k = pixelsInMiddleLineData - 1; k > i; k--) {
-                                    var pixelBackwards = getFullPixel(middleLineData, k);
-
-                                    if (pixelBackwards.r < maxPixVal && pixelBackwards.g < maxPixVal && pixelBackwards.b < maxPixVal) {
-                                        endOfBarcode = k;
-                                        break;
-                                    }
-                                };
-                                break;
-                            }
-                        };
-
-                        var BARCODE_WIDTH = endOfBarcode - startOfBarcode;
-                        console.log('barcodeValue: ', barcodeValue)
-                        console.log('В одном сантиметре ', BARCODE_WIDTH / barcodeValue, ' пикселей')
-                        $('#cannyTest').html('В одном сантиметре ' + BARCODE_WIDTH / barcodeValue + ' пикселей')
+                    function getFullPixel(data, position) {
+                        // функция достает из списка один полный n-й пиксель из 4 значений
+                        var pix = {};
+                        pix.r = data[position];
+                        pix.g = data[position + 1];
+                        pix.b = data[position + 2];
+                        pix.a = data[position + 3];
+                        return pix
                     }
-                });
+
+                    /////////////////////////
+                    // беру среднюю линию пикселей из обрезанного отфильтрованного изображения
+                    /////////////////////////
+                    var midH = Math.floor(canvas.height / 2);
+                    var midW = midH + canvas.width * 4;
+                    var middleLineData = imageData.data.slice(midH * midW, midH * midW + midW);
+                    var pixelsInMiddleLineData = Math.floor(middleLineData.length / 4);
+
+                    var startOfBarcode = 0;
+                    var endOfBarcode = 0;
+
+                    //////////////////////////
+                    // прохожу по этой линии с начала до первой полоски бракода, потом с конца до последней полоски баркода
+                    ///////////////////////
+                    for (i = 0; i < pixelsInMiddleLineData; i++) {
+                        // 'i' is one pixel rgba
+                        var pixel = getFullPixel(middleLineData, i);
+
+                        if (pixel.r < maxPixVal && pixel.g < maxPixVal && pixel.b < maxPixVal) { //if this pixel is start
+                            startOfBarcode = i;
+
+                            for (k = pixelsInMiddleLineData - 1; k > i; k--) {
+                                var pixelBackwards = getFullPixel(middleLineData, k);
+
+                                if (pixelBackwards.r < maxPixVal && pixelBackwards.g < maxPixVal && pixelBackwards.b < maxPixVal) {
+                                    endOfBarcode = k;
+                                    break;
+                                }
+                            };
+                            break;
+                        }
+                    };
 
 
-                function createCanvasWithCroppedBarcode() {
+                    // Результаты работы
+                    var BARCODE_WIDTH = endOfBarcode - startOfBarcode;
+                    console.log('barcodeValue: ', barcodeValue)
+                    console.log('В одном сантиметре ', BARCODE_WIDTH / barcodeValue, ' пикселей')
+                    $('#feedback').html('В одном сантиметре ' + BARCODE_WIDTH / barcodeValue + ' пикселей')
+                }
+
+
+                function insertCroppedBarcodeIntoCanvas(canvasToInsertCroppedBarcodeIn, boxX, boxY, boxWidth, boxHeight, angle) {
 
                     // create 2 temporary canvases
 
@@ -215,7 +215,7 @@ function encodeImageFileAsURL(element) {
 
                     // get the boundingbox of the rotated blue box
 
-                    var rectBB = getRotatedRectBB(result.boxes[0][1][0], result.boxes[0][1][1], fullBarcodeW, fullBarcodeH, result.angle);
+                    var rectBB = getRotatedRectBB(boxX, boxY, boxWidth, boxHeight, angle);
 
                     // clip the boundingbox of the rotated blue rect
                     // to a temporary canvas
@@ -242,9 +242,10 @@ function encodeImageFileAsURL(element) {
                     var offX = 0 //rectBB.width / 2 - fullBarcodeW / 2; почему-то это мешает корректной работе в канвасе
                     var offY = rectBB.height / 2 - fullBarcodeH / 2;
 
-                    canvas.width = fullBarcodeW;
-                    canvas.height = fullBarcodeH;
-                    context.drawImage(canvas2, -offX, -offY);
+                    canvasToInsertCroppedBarcodeIn.width = fullBarcodeW;
+                    canvasToInsertCroppedBarcodeIn.height = fullBarcodeH;
+                    calledCanvasContext = canvasToInsertCroppedBarcodeIn.getContext('2d')
+                    calledCanvasContext.drawImage(canvas2, -offX, -offY);
 
                 }
 
@@ -264,6 +265,7 @@ function encodeImageFileAsURL(element) {
 
             } else {
                 console.log("not detected", result);
+                $('#feedback').html('Не удалось расчитать. Попробуйте загрузить другое изображение.')
             }
         });
     }
