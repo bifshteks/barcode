@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>RESULT</title>
+</head>
+
+<body>
+    <div>
+        <!-- <div class="inputoutput">
+      <img id="imageSrc" alt="No Image" / >
+      <div class="caption">imageSrc
+        <input type="file" id="fileInput" name="file" />
+      </div>
+    </div> -->
+        <p style="display: none;">
+            Min value of detected pixel of start\end of barcode:
+            <input id="valPix" type="range" min="0" max="255"> <span id="i1"></span>
+            <br>
+            <br> First param of weight vector:
+            <input class="changeParam" id="firstWV" type="range" min="-10" max="10"> <span id="i2"></span>
+            <br> Second param of weight vector:
+            <input class="changeParam" id="secondWV" type="range" min="-10" max="10"> <span id="i3"></span>
+            <br> Third param of weight vector:
+            <input class="changeParam" id="thirdWV" type="range" min="-10" max="10"> <span id="i4"></span>
+            <br>
+            <br> Opaque:
+            <input class="changeParam" id="opaque" type="range" min="-10" max="10"> <span id="i5"></span>
+            <br>
+        </p>
+        <div class="inputoutput">
+            Загрузите изображение для определения отношения ширины баркода в сантиметрах к ширине в пикселях:
+            <input type="file" onchange="encodeImageFileAsURL(this)">
+        </div>
+        <canvas id="canvasCroped"></canvas>
+        <div id="feedback"></div>
+    </div>
+    <!-- <canvas id="mid"></canvas> -->
+</body>
+<script src="jquery.min.js"></script>
+<script src="quagga.js"></script>
+<script src="tracking.js"></script>
+<script>
+function encodeImageFileAsURL(element) {
+    window.STOP = false;
+    // /////////////////////
+    //  получаю полное изображениеб перевожу в BASE64
+    ////////////////////////
+    var file = element.files[0];
+    var reader = new FileReader();
+    reader.onloadend = function() {
+        Quagga.decodeSingle({
+                decoder: {
+                    readers: ["code_128_reader"],
+                },
+                locate: true,
+                capacity: 1,
+                inputStream: {
+                    size: 1600,
+                },
+                locator: {
+                    patchSize: 'middle',
+                },
+                src: reader.result,
+            }, function(result) {
+                if (result){
+                    console.log('Success ', result)
+                } else {
+                    console.log('not detected')
+                }
+            });
+
+    }
+    reader.readAsDataURL(file);
+}
+</script>
+
+</html>

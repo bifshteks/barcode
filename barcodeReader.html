@@ -72,8 +72,9 @@ function encodeImageFileAsURL(element) {
             var oneStep = Math.floor(between / 5)
             console.log(fromStart, toFinish, between)
             console.log('ONE STEP ', oneStep)
-            var sizeSteps = [fromStart, fromStart+oneStep, fromStart + oneStep*2, fromStart + oneStep*3, fromStart + oneStep*4]
+            // var sizeSteps = [fromStart, fromStart+oneStep, fromStart + oneStep*2, fromStart + oneStep*3, fromStart + oneStep*4]
             // var sizeSteps = [fromStart + oneStep*4,  fromStart + oneStep*3, fromStart + oneStep*2, fromStart+oneStep, fromStart]
+            var sizeSteps = [320, 640, 800, 1280, 1600, 1920]
             console.log(sizeSteps)
             console.log('size ', inputImageHeight, inputImageWidth);
             var patch_sizes = ['x-small', 'small', 'medium', 'large', 'x-large']
@@ -122,6 +123,35 @@ function encodeImageFileAsURL(element) {
                   , 0)
 
             }
+
+            function tryingPromises(listOfSizes, listOfPatches, goNext){
+                var copyListOfSizes = []
+                var copyListOfPatches = []
+                for (i=0; i<listOfPatches.lenth; i++){
+                    copyListOfSizes.push(listOfSizes[i]);
+                    copyListOfPatches.push(listOfPatches[i])
+                };
+                console.log('lists', copyListOfSizes, copyListOfPatches)
+                if (goNext){
+                  var promise = new Promise(function(resolve, reject) {
+                      var res = startDecode(maxSide, copyListOfPatches[0]);
+                      copyListOfSizes.splice(0,1)
+                      copyListOfPatches.splice(0,1)
+                      if (res && copyListOfSizes.length>0 && copyListOfPatches.length>0){
+                          resolve('SUCCESS');
+                      } else if (copyListOfSizes.length==0 || copyListOfPatches.length==0){
+                          console.log('exit')
+                          reject(copyListOfSizes, copyListOfPatches, false);
+                      } else {
+                          reject(copyListOfSizes, copyListOfPatches, true);
+                      }
+
+                  });
+                  promise.then(function(resStr){console.log(resStr)}, tryingPromises(copyListOfSizes, copyListOfPatches, true))
+                } else {
+                  console.log('ENDEXIT')
+                }
+            }
           
           
 
@@ -135,8 +165,9 @@ function encodeImageFileAsURL(element) {
 // ////////////////////////////////////////////////////////////////////////////////////////////////////
 // ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-          tryingWithAllCases();
+          // tryingWithAllCases();
           // tryingWithNormalParams();
+          tryingPromises(sizeSteps, patch_sizes, true)
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////
 // ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -151,7 +182,7 @@ function encodeImageFileAsURL(element) {
 
 
 
-          function tryingWithAllCases(){
+        function tryingWithAllCases(){
           setTimeout(function(){
               if (!STOP){
                 console.log('PARAMS::::::', sizeSteps[0], patch_sizes[0])
@@ -360,6 +391,7 @@ function encodeImageFileAsURL(element) {
                     readers: ["code_128_reader"],
                 },
                 locate: true,
+                capacity: 1,
                 inputStream: {
                     size: imageSize,
                 },
