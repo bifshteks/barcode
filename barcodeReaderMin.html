@@ -8,72 +8,203 @@
 
 <body>
     <div>
-        <!-- <div class="inputoutput">
-      <img id="imageSrc" alt="No Image" / >
-      <div class="caption">imageSrc
-        <input type="file" id="fileInput" name="file" />
-      </div>
-    </div> -->
-        <p style="display: none;">
-            Min value of detected pixel of start\end of barcode:
-            <input id="valPix" type="range" min="0" max="255"> <span id="i1"></span>
-            <br>
-            <br> First param of weight vector:
-            <input class="changeParam" id="firstWV" type="range" min="-10" max="10"> <span id="i2"></span>
-            <br> Second param of weight vector:
-            <input class="changeParam" id="secondWV" type="range" min="-10" max="10"> <span id="i3"></span>
-            <br> Third param of weight vector:
-            <input class="changeParam" id="thirdWV" type="range" min="-10" max="10"> <span id="i4"></span>
-            <br>
-            <br> Opaque:
-            <input class="changeParam" id="opaque" type="range" min="-10" max="10"> <span id="i5"></span>
-            <br>
-        </p>
-        <div class="inputoutput">
-            Загрузите изображение для определения отношения ширины баркода в сантиметрах к ширине в пикселях:
-            <input type="file" onchange="encodeImageFileAsURL(this)">
-        </div>
-        <canvas id="canvasCroped"></canvas>
-        <div id="feedback"></div>
+        <input type="file" id="inputEl">
+        <img id="image" style="display: none;">
+        <p id="result"></p>
+        <canvas id="canvas"></canvas>
+        <p>TESING</p>
+        <canvas id="testline" width="1270" height="30"></canvas>
+       <!--  <p>canvas testing</p>
+        <canvas id="testfull"></canvas> -->
     </div>
     <!-- <canvas id="mid"></canvas> -->
 </body>
 <script src="jquery.min.js"></script>
-<script src="quagga.js"></script>
+<!-- <script src="quagga.js"></script> -->
 <script src="tracking.js"></script>
+<!-- <script src="package/bundles/zxing.js"></script> -->
+<script src="zxing.qrcodereader.min.js"></script>
+<!-- <script src="package/esm5/browser/BrowserCodeReader.js"></script> -->
 <script>
-function encodeImageFileAsURL(element) {
-    window.STOP = false;
-    // /////////////////////
-    //  получаю полное изображениеб перевожу в BASE64
-    ////////////////////////
-    var file = element.files[0];
-    var reader = new FileReader();
-    reader.onloadend = function() {
-        Quagga.decodeSingle({
-                decoder: {
-                    readers: ["code_128_reader"],
-                },
-                locate: true,
-                capacity: 1,
-                inputStream: {
-                    size: 1600,
-                },
-                locator: {
-                    patchSize: 'middle',
-                },
-                src: reader.result,
-            }, function(result) {
-                if (result){
-                    console.log('Success ', result)
-                } else {
-                    console.log('not detected')
-                }
-            });
+var imgElement = document.getElementById('image');
+var inputElement = document.getElementById('inputEl');
+// var testname;
+inputElement.addEventListener('change', (e) => {
+    imgElement.src = URL.createObjectURL(e.target.files[0]);
+    imgElement.onload = getQrWidth;
+    // getQrWidth();
+}, false);
+console.log('before')
+function getQrWidth() {
+    var canvas = document.getElementById('canvas')
+    var context = canvas.getContext('2d')
+    canvas.width = imgElement.width
+    canvas.height = imgElement.height
+    context.drawImage(imgElement,0,0)
+    var dataUrl = canvas.toDataURL()
+
+    var createdImage = new Image();
+    createdImage.crossOrigin = "anonymous";
+    createdImage.src = dataUrl
+
+    var imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+
+    var verticalImgPix = tracking.Image.verticalConvolve(imageData.data, canvas.width, canvas.height, [0, 1, 1], 1)
+
+    for (i = 0; i < verticalImgPix.length; i++) {
+            imageData.data[i] = verticalImgPix[i];
+        };
+    context.putImageData(imageData, 0, 0);
+
+    const codeReader = new ZXing.BrowserQRCodeReader()
+    const imgSrc = createdImage.src
+    codeReader.decodeFromImage(undefined, imgSrc)
+        .then((result) => {
+            console.log('RESULT SCANING: ', result)
+            console.log(result.text)
+
+            var points = result.resultPoints;
+            var leftPoint = {};
+            var rightPoint = {};
+            leftPoint.x = Math.floor(points[0].x);
+            leftPoint.y = Math.floor(points[0].y);
+            rightPoint.x = Math.floor(points[1].x);
+            rightPoint.y = Math.floor(points[1].y);
+
+            var distanceBetween = getDistanceBetweenTwoDots(leftPoint.x, leftPoint.y, rightPoint.x, rightPoint.y);
+            console.log(leftPoint.x, leftPoint.y, rightPoint.x, rightPoint.y)
+            console.log('dist ', distanceBetween)
+            var measurementUncertainty = getMeasurementUncertainty(leftPoint.x, leftPoint.y, imageData, canvas.width, canvas.height);
+            console.log('meas ', measurementUncertainty)
+
+            var RESULT_WIDTH = distanceBetween + measurementUncertainty*2;
+            console.log('RESULT: with measurementUncertainty ', RESULT_WIDTH)
+
+            var printResult = document.getElementById('result')
+
+            var divide = RESULT_WIDTH / parseFloat(result.text.replace(',', '.'))
+            printResult.innerHTML = 'В одном сантиметре ' + divide + ' пикселей'
+
+
+
+
+
+
+
+
+
+
+        }).catch((err) => {
+            console.error('ERROR ', err)
+        })
+    console.log('end')
+}
+
+
+function getDistanceBetweenTwoDots(firstX, firstY, secondX, secodY){
+    var distance = Math.sqrt(Math.pow(secondX - firstX, 2) + Math.pow(secodY - firstY, 2))
+
+    return distance
+}
+
+function getMeasurementUncertainty(firstX, firstY, imageData, width, height){
+    console.log('getMeasUnc func imagedata: ', imageData)
+    var canvas1 = document.createElement("canvas");
+    var context1 = canvas1.getContext("2d");
+    canvas1.width = width
+    canvas1.height = height
+    context1.putImageData(imageData, 0, 0);
+    var accuracy = 75;
+
+    var pixelsLine = getPixelsLine(imageData, width, firstY).line;
+////////////////////////////////////
+    var canvas2 = document.getElementById('testline')
+    var context2 = canvas2.getContext('2d')
+
+    var imDa = context2.createImageData(canvas2.width, canvas2.height)
+
+    var repeat = pixelsLine.concat(pixelsLine, pixelsLine) 
+    repeat = repeat.concat(repeat,repeat,repeat,repeat,repeat)
+    repeat = repeat.concat(repeat)
+
+    for (i=0; i<imDa.data.length; i++){
+        imDa.data[i] = repeat[i]
+    }
+    context2.putImageData(imDa, 0, 0)
+//////////////////////////////////////
+
+    console.log('pixels line: ', pixelsLine)
+    window.firstWhiteSquareStarted = false;
+    window.firstWhiteSquareCrossed = false;
+    for (i=firstX; i>0; i--){
+        var pixel = getFullPixel(pixelsLine, i*4);
+        // console.log('pixel: ', pixel)
+
+        if (!firstWhiteSquareStarted){
+            var pixelSearchFor = {}
+            pixelSearchFor.l = accuracy + 1;
+            pixelSearchFor.r = 255;
+        } else if (!firstWhiteSquareCrossed){
+            var pixelSearchFor = {}
+            pixelSearchFor.l = 0;
+            pixelSearchFor.r = accuracy;
+
+        } else {
+            var pixelSearchFor = {}
+            pixelSearchFor.l = accuracy + 1;
+            pixelSearchFor.r = 255;
+        }
+
+        if (pixel.r >= pixelSearchFor.l && pixel.r <= pixelSearchFor.r && pixel.g >= pixelSearchFor.l && pixel.g <= pixelSearchFor.r && pixel.b >= pixelSearchFor.l && pixel.b <= pixelSearchFor.r  ){
+            if (!firstWhiteSquareStarted){
+                firstWhiteSquareStarted = true;
+                console.log('white started', i, pixelSearchFor.l, pixelSearchFor.r)
+            } else if (!firstWhiteSquareCrossed){
+                firstWhiteSquareCrossed = true;
+                console.log('white crossed', i, pixelSearchFor.l, pixelSearchFor.r)
+            } else {
+                console.log('measurementUncertainty is found', i)
+                var measurementUnc = firstX - i;
+                return  measurementUnc
+                break
+            }
+        }
 
     }
-    reader.readAsDataURL(file);
+    console.log('measurementUncertainty is  NOT found')
+
+
+    function getPixelsLine(imageData, width, height){
+        console.log('getPixelsLine func imageData: ', imageData)
+        var start = 4 * width * height ;
+        var end = start +  width*4;
+        var line = []
+        for (i=start; i<end; i++){
+            line.push(imageData.data[i])
+        }
+
+        var resultDict = {
+            'start':  start,  
+            'end': end,
+            'line': line  
+        }
+        console.log('getPixelsLine func line:', line, start, end)
+
+        return resultDict
+    }
+
+    function getFullPixel(data, position) {
+        // функция достает из списка один полный n-й пиксель из 4 значений
+        var pix = {};
+        pix.r = data[position];
+        pix.g = data[position + 1];
+        pix.b = data[position + 2];
+        pix.a = data[position + 3];
+        return pix
+    }
 }
+console.log('after')
+
 </script>
 
 </html>
