@@ -28,13 +28,13 @@
 <script>
 var imgElement = document.getElementById('image');
 var inputElement = document.getElementById('inputEl');
-// var testname;
+
 inputElement.addEventListener('change', (e) => {
     imgElement.src = URL.createObjectURL(e.target.files[0]);
     imgElement.onload = getQrWidth;
-    // getQrWidth();
 }, false);
-console.log('before')
+
+
 function getQrWidth() {
     var canvas = document.getElementById('canvas')
     var context = canvas.getContext('2d')
@@ -58,10 +58,12 @@ function getQrWidth() {
 
     const codeReader = new ZXing.BrowserQRCodeReader()
     const imgSrc = createdImage.src
+    ////////////////////////////////////////////
+    // Скармливаю zxing'y изображение
+    ///////////////////////////////////////////
     codeReader.decodeFromImage(undefined, imgSrc)
         .then((result) => {
-            console.log('RESULT SCANING: ', result)
-            console.log(result.text)
+            // Если получен результат
 
             var points = result.resultPoints;
             var leftPoint = {};
@@ -71,11 +73,12 @@ function getQrWidth() {
             rightPoint.x = Math.floor(points[1].x);
             rightPoint.y = Math.floor(points[1].y);
 
+
+            // Дистанция между центрами детектирующих квадратов
             var distanceBetween = getDistanceBetweenTwoDots(leftPoint.x, leftPoint.y, rightPoint.x, rightPoint.y);
-            console.log(leftPoint.x, leftPoint.y, rightPoint.x, rightPoint.y)
-            console.log('dist ', distanceBetween)
+
+            // Ширина половины детектирующего квадрата
             var measurementUncertainty = getMeasurementUncertainty(leftPoint.x, leftPoint.y, imageData, canvas.width, canvas.height);
-            console.log('meas ', measurementUncertainty)
 
             var RESULT_WIDTH = distanceBetween + measurementUncertainty*2;
             console.log('RESULT: with measurementUncertainty ', RESULT_WIDTH)
@@ -84,15 +87,6 @@ function getQrWidth() {
 
             var divide = RESULT_WIDTH / parseFloat(result.text.replace(',', '.'))
             printResult.innerHTML = 'В одном сантиметре ' + divide + ' пикселей'
-
-
-
-
-
-
-
-
-
 
         }).catch((err) => {
             console.error('ERROR ', err)
@@ -108,7 +102,8 @@ function getDistanceBetweenTwoDots(firstX, firstY, secondX, secodY){
 }
 
 function getMeasurementUncertainty(firstX, firstY, imageData, width, height){
-    console.log('getMeasUnc func imagedata: ', imageData)
+    // Возвращает половину ширины первого квадрата 
+
     var canvas1 = document.createElement("canvas");
     var context1 = canvas1.getContext("2d");
     canvas1.width = width
@@ -117,7 +112,7 @@ function getMeasurementUncertainty(firstX, firstY, imageData, width, height){
     var accuracy = 75;
 
     var pixelsLine = getPixelsLine(imageData, width, firstY).line;
-////////////////////////////////////
+    // Рисует холст с повторяющейся выбранной линией на уровне центра первого квадрата
     var canvas2 = document.getElementById('testline')
     var context2 = canvas2.getContext('2d')
 
@@ -131,14 +126,15 @@ function getMeasurementUncertainty(firstX, firstY, imageData, width, height){
         imDa.data[i] = repeat[i]
     }
     context2.putImageData(imDa, 0, 0)
-//////////////////////////////////////
+    ///////////////////////////////////
 
     console.log('pixels line: ', pixelsLine)
     window.firstWhiteSquareStarted = false;
     window.firstWhiteSquareCrossed = false;
+
+    // Идет по пикселям от центра и высчитывает где кончается квадрат
     for (i=firstX; i>0; i--){
         var pixel = getFullPixel(pixelsLine, i*4);
-        // console.log('pixel: ', pixel)
 
         if (!firstWhiteSquareStarted){
             var pixelSearchFor = {}
@@ -169,13 +165,13 @@ function getMeasurementUncertainty(firstX, firstY, imageData, width, height){
                 break
             }
         }
-
     }
-    console.log('measurementUncertainty is  NOT found')
+    
 
 
     function getPixelsLine(imageData, width, height){
-        console.log('getPixelsLine func imageData: ', imageData)
+        // возвращает одну линию во всю ширину изображения, содержащую центр квадрата
+
         var start = 4 * width * height ;
         var end = start +  width*4;
         var line = []
@@ -188,13 +184,13 @@ function getMeasurementUncertainty(firstX, firstY, imageData, width, height){
             'end': end,
             'line': line  
         }
-        console.log('getPixelsLine func line:', line, start, end)
 
         return resultDict
     }
 
     function getFullPixel(data, position) {
         // функция достает из списка один полный n-й пиксель из 4 значений
+
         var pix = {};
         pix.r = data[position];
         pix.g = data[position + 1];
@@ -203,8 +199,6 @@ function getMeasurementUncertainty(firstX, firstY, imageData, width, height){
         return pix
     }
 }
-console.log('after')
-
 </script>
 
 </html>
