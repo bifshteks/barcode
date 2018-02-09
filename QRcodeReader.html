@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>RESULT</title>
+</head>
+
+<body>
+    <div>
+        <input type="file" id="inputEl">
+        <img id="image" style="display: none;">
+        <p id="result"></p>
+        <canvas id="canvas"></canvas>
+        <p>TESING</p>
+        <canvas id="testline" width="1270" height="30"></canvas>
+       <!--  <p>canvas testing</p>
+        <canvas id="testfull"></canvas> -->
+    </div>
+    <!-- <canvas id="mid"></canvas> -->
+</body>
+<script src="jquery.min.js"></script>
+<!-- <script src="quagga.js"></script> -->
+<script src="tracking.js"></script>
+<!-- <script src="package/bundles/zxing.js"></script> -->
+<script src="zxing.qrcodereader.min.js"></script>
+<!-- <script src="package/esm5/browser/BrowserCodeReader.js"></script> -->
+<script>
+var imgElement = document.getElementById('image');
+var inputElement = document.getElementById('inputEl');
+
+inputElement.addEventListener('change', (e) => {
+    imgElement.src = URL.createObjectURL(e.target.files[0]);
+    imgElement.onload = getQrWidth;
+}, false);
+
+
+function getQrWidth() {
+    var canvas = document.getElementById('canvas')
+    var context = canvas.getContext('2d')
+    canvas.width = imgElement.width
+    canvas.height = imgElement.height
+    context.drawImage(imgElement,0,0)
+    var dataUrl = canvas.toDataURL()
+
+    var createdImage = new Image();
+    createdImage.crossOrigin = "anonymous";
+    createdImage.src = dataUrl
+
+    var imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+
+    var verticalImgPix = tracking.Image.verticalConvolve(imageData.data, canvas.width, canvas.height, [0, 1, 1], 1)
+
+    for (i = 0; i < verticalImgPix.length; i++) {
+            imageData.data[i] = verticalImgPix[i];
+        };
+    context.putImageData(imageData, 0, 0);
+
+    const codeReader = new ZXing.BrowserQRCodeReader()
+    const imgSrc = createdImage.src
+    ////////////////////////////////////////////
+    // Скармливаю zxing'y изображение
+    ///////////////////////////////////////////
+    codeReader.decodeFromImage(undefined, imgSrc)
+        .then((result) => {
+            // Если получен результат
+
+            var points = result.resultPoints;
+            var leftPoint = {};
+            var rightPoint = {};
+            leftPoint.x = Math.floor(points[0].x);
+            leftPoint.y = Math.floor(points[0].y);
+            rightPoint.x = Math.floor(points[1].x);
+            rightPoint.y = Math.floor(points[1].y);
+
+
+            // Дистанция между центрами детектирующих квадратов
+            var distanceBetween = getDistanceBetweenTwoDots(leftPoint.x, leftPoint.y, rightPoint.x, rightPoint.y);
+
+            // Ширина половины детектирующего квадрата
+            var measurementUncertainty = getMeasurementUncertainty(leftPoint.x, leftPoint.y, imageData, canvas.width, canvas.height);
+
+            var RESULT_WIDTH = distanceBetween + measurementUncertainty*2;
+            console.log('RESULT: with measurementUncertainty ', RESULT_WIDTH)
+
+            var printResult = document.getElementById('result')
+
+            var divide = RESULT_WIDTH / parseFloat(result.text.replace(',', '.'))
+            printResult.innerHTML = 'В одном сантиметре ' + divide + ' пикселей'
+
+        }).catch((err) => {
+            console.error('ERROR ', err)
+        })
+    console.log('end')
+}
+
+
+function getDistanceBetweenTwoDots(firstX, firstY, secondX, secodY){
+    var distance = Math.sqrt(Math.pow(secondX - firstX, 2) + Math.pow(secodY - firstY, 2))
+
+    return distance
+}
+
+function getMeasurementUncertainty(firstX, firstY, imageData, width, height){
+    // Возвращает половину ширины первого квадрата 
+
+    var canvas1 = document.createElement("canvas");
+    var context1 = canvas1.getContext("2d");
+    canvas1.width = width
+    canvas1.height = height
+    context1.putImageData(imageData, 0, 0);
+    var accuracy = 75;
+
+    var pixelsLine = getPixelsLine(imageData, width, firstY).line;
+    // Рисует холст с повторяющейся выбранной линией на уровне центра первого квадрата
+    var canvas2 = document.getElementById('testline')
+    var context2 = canvas2.getContext('2d')
+
+    var imDa = context2.createImageData(canvas2.width, canvas2.height)
+
+    var repeat = pixelsLine.concat(pixelsLine, pixelsLine) 
+    repeat = repeat.concat(repeat,repeat,repeat,repeat,repeat)
+    repeat = repeat.concat(repeat)
+
+    for (i=0; i<imDa.data.length; i++){
+        imDa.data[i] = repeat[i]
+    }
+    context2.putImageData(imDa, 0, 0)
+    ///////////////////////////////////
+
+    console.log('pixels line: ', pixelsLine)
+    window.firstWhiteSquareStarted = false;
+    window.firstWhiteSquareCrossed = false;
+
+    // Идет по пикселям от центра и высчитывает где кончается квадрат
+    for (i=firstX; i>0; i--){
+        var pixel = getFullPixel(pixelsLine, i*4);
+
+        if (!firstWhiteSquareStarted){
+            var pixelSearchFor = {}
+            pixelSearchFor.l = accuracy + 1;
+            pixelSearchFor.r = 255;
+        } else if (!firstWhiteSquareCrossed){
+            var pixelSearchFor = {}
+            pixelSearchFor.l = 0;
+            pixelSearchFor.r = accuracy;
+
+        } else {
+            var pixelSearchFor = {}
+            pixelSearchFor.l = accuracy + 1;
+            pixelSearchFor.r = 255;
+        }
+
+        if (pixel.r >= pixelSearchFor.l && pixel.r <= pixelSearchFor.r && pixel.g >= pixelSearchFor.l && pixel.g <= pixelSearchFor.r && pixel.b >= pixelSearchFor.l && pixel.b <= pixelSearchFor.r  ){
+            if (!firstWhiteSquareStarted){
+                firstWhiteSquareStarted = true;
+                console.log('white started', i, pixelSearchFor.l, pixelSearchFor.r)
+            } else if (!firstWhiteSquareCrossed){
+                firstWhiteSquareCrossed = true;
+                console.log('white crossed', i, pixelSearchFor.l, pixelSearchFor.r)
+            } else {
+                console.log('measurementUncertainty is found', i)
+                var measurementUnc = firstX - i;
+                return  measurementUnc
+                break
+            }
+        }
+    }
+    
+
+
+    function getPixelsLine(imageData, width, height){
+        // возвращает одну линию во всю ширину изображения, содержащую центр квадрата
+
+        var start = 4 * width * height ;
+        var end = start +  width*4;
+        var line = []
+        for (i=start; i<end; i++){
+            line.push(imageData.data[i])
+        }
+
+        var resultDict = {
+            'start':  start,  
+            'end': end,
+            'line': line  
+        }
+
+        return resultDict
+    }
+
+    function getFullPixel(data, position) {
+        // функция достает из списка один полный n-й пиксель из 4 значений
+
+        var pix = {};
+        pix.r = data[position];
+        pix.g = data[position + 1];
+        pix.b = data[position + 2];
+        pix.a = data[position + 3];
+        return pix
+    }
+}
+</script>
+
+</html>
