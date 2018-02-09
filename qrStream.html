@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="author" content="Adrian Toșcă">
+		<meta name="description" content="Scan QR Code from Video Camera with ZXing javascript library">
+		<title>SCANING!!!</title>
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.css">
+		<link rel="stylesheet" href="https://cdn.rawgit.com/milligram/milligram/master/dist/milligram.min.css">
+	</head>
+	<body>
+
+		<main class="wrapper">
+
+			<section class="container" id="demo-content">
+
+				<div>
+					<a class="button" id="startButton">Start</a>
+					<a class="button" id="resetButton">Reset</a>
+				</div>
+
+				<div>
+					<video id="video" width="300" height="200" style="border: 1px solid gray"></video>
+				</div>
+				<div class="canvasContainer">
+					<canvas id="canvasFrame"></canvas>
+				</div>
+				
+				<div id="sourceSelectPanel" style="display:none">
+					<label for="sourceSelect">Change video source:</label>
+					<select id="sourceSelect" style="max-width:400px">
+					</select>
+				</div>
+
+				<label>Result:</label>
+				<blockquote>
+					<p id="result"></p>
+				</blockquote>
+
+				<img id="image" style="display: none;">
+		        <p id="result"></p>
+		        <canvas id="canvas"></canvas>
+		        <p>TESING</p>
+		        <canvas id="testline" width="1270" height="30"></canvas>
+
+		</main>
+		<!-- <script src="jquery.min.js"></script> -->
+		<script src="tracking.js"></script>
+
+		<script type="text/javascript" src="zxing.qrcodereader.min.js"></script>
+        <script type="text/javascript">
+			window.addEventListener('load', function() {
+				const codeReader = new ZXing.BrowserQRCodeReader()
+				console.log('ZXing code reader initialized')
+				codeReader.getVideoInputDevices()
+					.then((videoInputDevices) => {
+
+
+						// Если несколько камер (фронтальная\основная) то дает выбор
+						const sourceSelect = document.getElementById('sourceSelect')
+						const firstDeviceId = videoInputDevices[0].deviceId
+						if (videoInputDevices.length > 1) {
+							videoInputDevices.forEach((element) => {
+								const sourceOption = document.createElement('option')
+								sourceOption.text = element.label
+								sourceOption.value = element.deviceId
+								sourceSelect.appendChild(sourceOption)
+							})
+							const sourceSelectPanel = document.getElementById('sourceSelectPanel')
+							sourceSelectPanel.style.display = 'block'
+						}
+						/////////////////////////////////////////////////
+
+
+						document.getElementById('startButton').addEventListener('click', () => {
+							codeReader.decodeFromInputVideoDevice(firstDeviceId, 'video').then((result) => {
+								// RESULT IS HERE
+								console.log('cntx', videoFrameWithDecodedQRContext)
+								var frameCanvas = videoFrameWithDecodedQRContext;
+
+
+								console.log(result)
+								document.getElementById('result').textContent = result.text;
+
+								frameW = frameCanvas.width;
+								frameH = frameCanvas.height;
+								frameCanvasContext = frameCanvas.getContext('2d');
+								frameImageData = frameCanvasContext.getImageData(0, 0, frameW, frameH)
+								getQrWidth(frameW, frameH, frameImageData)
+
+
+
+
+
+							}).catch((err) => {
+								console.error(err)
+								document.getElementById('result').textContent = err
+							})
+							console.log(`Started continous decode from camera with id ${firstDeviceId}`)
+						})
+						document.getElementById('resetButton').addEventListener('click', () => {
+							codeReader.reset()
+							console.log('Reset.')
+						})
+					})
+					.catch((err) => {
+						console.error(err)
+					})
+			})
+
+function getQrWidth(mainCanvasW, mainCanvasH, frameImageData) {
+    var canvas = document.getElementById('canvas')
+    var context = canvas.getContext('2d')
+    canvas.width = mainCanvasW;
+    canvas.height = mainCanvasH;
+    context.putImageData(frameImageData, 0, 0)
+    var dataUrl = canvas.toDataURL()
+
+    var createdImage = document.getElementById('image');
+    createdImage.crossOrigin = "anonymous";
+    createdImage.src = dataUrl
+
+    var imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+
+    var verticalImgPix = tracking.Image.verticalConvolve(imageData.data, canvas.width, canvas.height, [0, 1, 1], 1)
+
+    for (i = 0; i < verticalImgPix.length; i++) {
+            imageData.data[i] = verticalImgPix[i];
+        };
+    context.putImageData(imageData, 0, 0);
+
+    const codeReader = new ZXing.BrowserQRCodeReader()
+    const imgSrc = createdImage.src
+    ////////////////////////////////////////////
+    // Скармливаю zxing'y изображение
+    ///////////////////////////////////////////
+    codeReader.decodeFromImage(undefined, imgSrc)
+        .then((result) => {
+            // Если получен результат
+
+            var points = result.resultPoints;
+            var leftPoint = {};
+            var rightPoint = {};
+            leftPoint.x = Math.floor(points[0].x);
+            leftPoint.y = Math.floor(points[0].y);
+            rightPoint.x = Math.floor(points[1].x);
+            rightPoint.y = Math.floor(points[1].y);
+
+
+            // Дистанция между центрами детектирующих квадратов
+            var distanceBetween = getDistanceBetweenTwoDots(leftPoint.x, leftPoint.y, rightPoint.x, rightPoint.y);
+
+            // Ширина половины детектирующего квадрата
+            var measurementUncertainty = getMeasurementUncertainty(leftPoint.x, leftPoint.y, imageData, canvas.width, canvas.height);
+
+            var RESULT_WIDTH = distanceBetween + measurementUncertainty*2;
+            console.log('RESULT width with measurementUncertainty ', RESULT_WIDTH)
+
+            var printResult = document.getElementById('result')
+
+            var divide = RESULT_WIDTH / parseFloat(result.text.replace(',', '.'))
+            printResult.innerHTML = 'В одном сантиметре ' + divide + ' пикселей'
+
+        }).catch((err) => {
+            console.error('ERROR ', err)
+        })
+    console.log('end')
+}
+
+
+function getDistanceBetweenTwoDots(firstX, firstY, secondX, secodY){
+    var distance = Math.sqrt(Math.pow(secondX - firstX, 2) + Math.pow(secodY - firstY, 2))
+
+    return distance
+}
+
+function getMeasurementUncertainty(firstX, firstY, imageData, width, height){
+    // Возвращает половину ширины первого квадрата 
+
+    var canvas1 = document.createElement("canvas");
+    var context1 = canvas1.getContext("2d");
+    canvas1.width = width
+    canvas1.height = height
+    context1.putImageData(imageData, 0, 0);
+    var accuracy = 70;
+
+    var pixelsLine = getPixelsLine(imageData, width, firstY).line;
+    // Рисует холст с повторяющейся выбранной линией на уровне центра первого квадрата
+    var canvas2 = document.getElementById('testline')
+    var context2 = canvas2.getContext('2d')
+
+    var imDa = context2.createImageData(canvas2.width, canvas2.height)
+
+    var repeat = pixelsLine.concat(pixelsLine, pixelsLine) 
+    repeat = repeat.concat(repeat,repeat,repeat,repeat,repeat)
+    repeat = repeat.concat(repeat)
+
+    for (i=0; i<imDa.data.length; i++){
+        imDa.data[i] = repeat[i]
+    }
+    context2.putImageData(imDa, 0, 0)
+    ///////////////////////////////////
+
+    console.log('pixels line: ', pixelsLine)
+    window.firstWhiteSquareStarted = false;
+    window.firstWhiteSquareCrossed = false;
+
+    // Идет по пикселям от центра и высчитывает где кончается квадрат
+    for (i=firstX; i>0; i--){
+        var pixel = getFullPixel(pixelsLine, i*4);
+
+        if (!firstWhiteSquareStarted){
+            var pixelSearchFor = {}
+            pixelSearchFor.l = accuracy + 1;
+            pixelSearchFor.r = 255;
+        } else if (!firstWhiteSquareCrossed){
+            var pixelSearchFor = {}
+            pixelSearchFor.l = 0;
+            pixelSearchFor.r = accuracy;
+
+        } else {
+            var pixelSearchFor = {}
+            pixelSearchFor.l = accuracy + 1;
+            pixelSearchFor.r = 255;
+        }
+
+        if ( areInInterval(pixel.r, pixel.g, pixel.b, pixelSearchFor.l, pixelSearchFor.r, accuracy) ){
+            if (!firstWhiteSquareStarted){
+                firstWhiteSquareStarted = true;
+                console.log('white started', i, pixelSearchFor.l, pixelSearchFor.r)
+            } else if (!firstWhiteSquareCrossed){
+                firstWhiteSquareCrossed = true;
+                console.log('white crossed', i, pixelSearchFor.l, pixelSearchFor.r)
+            } else {
+                var measurementUnc = firstX - i;
+                console.log('measurementUncertainty is found', measurementUnc)
+                return  measurementUnc
+                break
+            }
+        }
+    }
+    
+
+
+    function getPixelsLine(imageData, width, height){
+        // возвращает одну линию во всю ширину изображения, содержащую центр квадрата
+
+        var start = 4 * width * height ;
+        var end = start +  width*4;
+        var line = []
+        for (i=start; i<end; i++){
+            line.push(imageData.data[i])
+        }
+
+        var resultDict = {
+            'start':  start,  
+            'end': end,
+            'line': line  
+        }
+
+        return resultDict
+    }
+
+    function getFullPixel(data, position) {
+        // функция достает из списка один полный n-й пиксель из 4 значений
+
+        var pix = {};
+        pix.r = data[position];
+        pix.g = data[position + 1];
+        pix.b = data[position + 2];
+        pix.a = data[position + 3];
+        return pix
+    }
+
+    function areInInterval(r, g, b, from, to, accuracy) {
+        x = isInInterval(r, from, to)
+        y = isInInterval(g, from, to)
+        z = isInInterval(b, from, to)
+
+        threeThirthAccuraccy = accuracy / 4*3
+
+        if (x&&y&&b>threeThirthAccuraccy || x&&z&&g>threeThirthAccuraccy || y&&z&&r>threeThirthAccuraccy) {
+            return true
+        }
+
+        function isInInterval(p, from, to){
+            if (p >= from && p <= to){
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+}
+		</script>
+
+	</body>
+</html>
