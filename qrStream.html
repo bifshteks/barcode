@@ -18,7 +18,7 @@
 
 				<div>
 					<a class="button" id="startButton">Start</a>
-					<a class="button" id="resetButton">Reset</a>
+					<a class="button" id="resetButton">Stop</a>
 				</div>
 
 				<div>
@@ -36,13 +36,13 @@
 
 				<label>Result:</label>
 				<blockquote>
-					<p id="result"></p>
+					<p id="resultMessage"></p>
 				</blockquote>
 
 				<img id="image" style="display: none;">
-		        <p id="result"></p>
+		        <p id="result" style="display: none;"></p>
 		        <canvas id="canvas"></canvas>
-		        <p>TESING</p>
+		        
 		        <canvas id="testline" width="1270" height="30"></canvas>
 
 		</main>
@@ -74,31 +74,45 @@
 						/////////////////////////////////////////////////
 
 
-						document.getElementById('startButton').addEventListener('click', () => {
-							codeReader.decodeFromInputVideoDevice(firstDeviceId, 'video').then((result) => {
-								// RESULT IS HERE
-								console.log('cntx', videoFrameWithDecodedQRContext)
-								var frameCanvas = videoFrameWithDecodedQRContext;
+						document.getElementById('startButton').addEventListener('click', async function (){                              
+                            
+                                async function startScaning(){
+                                    try {
+                                        var result = await codeReader.decodeFromInputVideoDevice(firstDeviceId, 'video')
+                                        // RESULT IS HERE
+                                        if (result.text.slice(0, 4) == 'QRS-') {
+                                            console.log('cntx', videoFrameWithDecodedQRContext)
+                                            var frameCanvas = videoFrameWithDecodedQRContext;
+
+                                            console.log('Объект результата: ', result)
+                                            document.getElementById('result').textContent = result.text;
+
+                                            frameW = frameCanvas.width;
+                                            frameH = frameCanvas.height;
+                                            frameCanvasContext = frameCanvas.getContext('2d');
+                                            frameImageData = frameCanvasContext.getImageData(0, 0, frameW, frameH);
+                                            await getQrWidth(frameW, frameH, frameImageData);
+                                        } else {
+                                            document.getElementById('resultMessage').innerHTML = 'Некорректный формат QR-кода'
+                                        }
+                                        
+                                    } catch (err) {
+                                        console.error(err);
+                                        document.getElementById('result').textContent = err;
+                                    }
+                                }
+                                while (true) {
+                                    console.log('LOP')
+                                    await startScaning();
+                                    await setTimeout(1000)
+                                    
+                                }
+
+                                // await startScaning();
+                            
 
 
-								console.log(result)
-								document.getElementById('result').textContent = result.text;
-
-								frameW = frameCanvas.width;
-								frameH = frameCanvas.height;
-								frameCanvasContext = frameCanvas.getContext('2d');
-								frameImageData = frameCanvasContext.getImageData(0, 0, frameW, frameH)
-								getQrWidth(frameW, frameH, frameImageData)
-
-
-
-
-
-							}).catch((err) => {
-								console.error(err)
-								document.getElementById('result').textContent = err
-							})
-							console.log(`Started continous decode from camera with id ${firstDeviceId}`)
+                            
 						})
 						document.getElementById('resetButton').addEventListener('click', () => {
 							codeReader.reset()
@@ -110,7 +124,8 @@
 					})
 			})
 
-function getQrWidth(mainCanvasW, mainCanvasH, frameImageData) {
+async function getQrWidth(mainCanvasW, mainCanvasH, frameImageData) {
+
     var canvas = document.getElementById('canvas')
     var context = canvas.getContext('2d')
     canvas.width = mainCanvasW;
@@ -136,8 +151,8 @@ function getQrWidth(mainCanvasW, mainCanvasH, frameImageData) {
     ////////////////////////////////////////////
     // Скармливаю zxing'y изображение
     ///////////////////////////////////////////
-    codeReader.decodeFromImage(undefined, imgSrc)
-        .then((result) => {
+    var result = await codeReader.decodeFromImage(undefined, imgSrc)
+        try {
             // Если получен результат
 
             var points = result.resultPoints;
@@ -153,19 +168,33 @@ function getQrWidth(mainCanvasW, mainCanvasH, frameImageData) {
             var distanceBetween = getDistanceBetweenTwoDots(leftPoint.x, leftPoint.y, rightPoint.x, rightPoint.y);
 
             // Ширина половины детектирующего квадрата
-            var measurementUncertainty = getMeasurementUncertainty(leftPoint.x, leftPoint.y, imageData, canvas.width, canvas.height);
+            var measurementUncertainty = await getMeasurementUncertainty(leftPoint.x, leftPoint.y, imageData, canvas.width, canvas.height);
+            // console.log('mesmes ', measurementUncertainty)
+            var printResult = document.getElementById('resultMessage')
+            if (measurementUncertainty !== undefined ) {
 
-            var RESULT_WIDTH = distanceBetween + measurementUncertainty*2;
-            console.log('RESULT width with measurementUncertainty ', RESULT_WIDTH)
+                var RESULT_WIDTH = distanceBetween + measurementUncertainty*2;
+                console.log('RESULT width with measurementUncertainty ', RESULT_WIDTH)
 
-            var printResult = document.getElementById('result')
+                
 
-            var divide = RESULT_WIDTH / parseFloat(result.text.replace(',', '.'))
-            printResult.innerHTML = 'В одном сантиметре ' + divide + ' пикселей'
+                var divide = RESULT_WIDTH / parseFloat(result.text.slice(4).replace(',', '.'))
+                printResult.innerHTML = 'В одном сантиметре ' + divide + ' пикселей'
 
-        }).catch((err) => {
+
+                return divide
+            } else {
+                console.log('Значение qr-кода: ', result.text)
+                printResult.innerHTML = 'Не удалось определить точную ширину'
+
+                return distanceBetween
+            }
+
+            // return divide
+
+        } catch(err) {
             console.error('ERROR ', err)
-        })
+        }
     console.log('end')
 }
 
@@ -188,22 +217,22 @@ function getMeasurementUncertainty(firstX, firstY, imageData, width, height){
 
     var pixelsLine = getPixelsLine(imageData, width, firstY).line;
     // Рисует холст с повторяющейся выбранной линией на уровне центра первого квадрата
-    var canvas2 = document.getElementById('testline')
-    var context2 = canvas2.getContext('2d')
+    // var canvas2 = document.getElementById('testline')
+    // var context2 = canvas2.getContext('2d')
 
-    var imDa = context2.createImageData(canvas2.width, canvas2.height)
+    // var imDa = context2.createImageData(canvas2.width, canvas2.height)
 
-    var repeat = pixelsLine.concat(pixelsLine, pixelsLine) 
-    repeat = repeat.concat(repeat,repeat,repeat,repeat,repeat)
-    repeat = repeat.concat(repeat)
+    // var repeat = pixelsLine.concat(pixelsLine, pixelsLine) 
+    // repeat = repeat.concat(repeat,repeat,repeat,repeat,repeat)
+    // repeat = repeat.concat(repeat)
 
-    for (i=0; i<imDa.data.length; i++){
-        imDa.data[i] = repeat[i]
-    }
-    context2.putImageData(imDa, 0, 0)
+    // for (i=0; i<imDa.data.length; i++){
+    //     imDa.data[i] = repeat[i]
+    // }
+    // context2.putImageData(imDa, 0, 0)
     ///////////////////////////////////
 
-    console.log('pixels line: ', pixelsLine)
+    // console.log('pixels line: ', pixelsLine)
     window.firstWhiteSquareStarted = false;
     window.firstWhiteSquareCrossed = false;
 
@@ -229,10 +258,10 @@ function getMeasurementUncertainty(firstX, firstY, imageData, width, height){
         if ( areInInterval(pixel.r, pixel.g, pixel.b, pixelSearchFor.l, pixelSearchFor.r, accuracy) ){
             if (!firstWhiteSquareStarted){
                 firstWhiteSquareStarted = true;
-                console.log('white started', i, pixelSearchFor.l, pixelSearchFor.r)
+                // console.log('white started', i, pixelSearchFor.l, pixelSearchFor.r)
             } else if (!firstWhiteSquareCrossed){
                 firstWhiteSquareCrossed = true;
-                console.log('white crossed', i, pixelSearchFor.l, pixelSearchFor.r)
+                // console.log('white crossed', i, pixelSearchFor.l, pixelSearchFor.r)
             } else {
                 var measurementUnc = firstX - i;
                 console.log('measurementUncertainty is found', measurementUnc)
@@ -240,6 +269,7 @@ function getMeasurementUncertainty(firstX, firstY, imageData, width, height){
                 break
             }
         }
+        return ''
     }
     
 
